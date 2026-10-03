@@ -1,0 +1,430 @@
+# Voice Pick Demo Configuration
+# All poses in controller units: um (position) / 0.001deg (rotation)
+
+safety_boundary:
+  x_min: -100000
+  x_max: 700000
+  y_min: -500000
+  y_max: 500000
+  z_min: 100000
+  z_max: 900000
+
+pose_limits:
+  enforce_maintenance_limits: false
+  enforce_rotation_limits: false
+  x_min: -43264
+  x_max: 671665
+  y_min: -469446
+  y_max: 469456
+  z_min: 110000
+  z_max: 900000
+  rx_min: -89999
+  rx_max: 89999
+  ry_min: -89999
+  ry_max: 89999
+
+speed:
+  fast_percent: 60
+  slow_percent: 20
+  speed_switch_z_offset_um: 50000
+  presets:
+    low: 25
+    medium: 60
+    high: 100
+
+ui:
+  mode: "classic"
+  controls:
+    quick_pick:
+      show_arm_controls: true
+      show_reload_config: false
+      show_catalog_picker: false
+      fixed_fallback_objects:
+        - trapezoid
+        - board
+        - butter_knife
+
+gripper:
+  enabled: true
+  agx_ip: "192.168.1.100"
+  agx_port: 5002
+  endpoints:
+    - host: "192.168.1.100"
+      port: 5003
+      label: "agx_v2_192_168_1_100"
+    - host: "192.168.1.100"
+      port: 5002
+      label: "agx_192_168_1_100"
+    - host: "192.168.1.232"
+      port: 5002
+      label: "switch_direct_232"
+    - host: "192.168.1.233"
+      port: 5002
+      label: "switch_direct_233"
+    - host: "10.42.0.1"
+      port: 5002
+      label: "legacy_linux_relay"
+  open_command: "o"
+  close_command: "c"
+  close_delay_s: 1.5
+  open_delay_s: 0.5
+  position_move_mode: "stepped"
+  open_step_ticks: 24
+  open_step_delay_s: 0.015
+  close_step_ticks: 10
+  close_step_delay_s: 0.03
+  remote_recording:
+    enabled: true
+    filename_prefix: "tactile_v2"
+    output_dir: "data/agx_tactile_raw"
+    start_timeout_s: 2.0
+    stop_timeout_s: 4.0
+
+arm:
+  connections:
+    - host: "192.168.1.232"
+      port: 502
+      label: "direct_232"
+    - host: "192.168.1.233"
+      port: 502
+      label: "direct_233"
+    - host: "10.42.0.1"
+      port: 1502
+      label: "legacy_linux_relay"
+    - host: "127.0.0.1"
+      port: 1502
+      label: "legacy_ssh_tunnel"
+  unit_id: 2
+  timeout_s: 1.0
+  pose_poll_hz: 4
+
+pick_sequence:
+  home_before: true
+  home_after: false
+  return_pose: "ready"
+  settle_wait_s: 2.0
+
+home_routing:
+  default_strategy: "native_1405"
+  allow_staged_route: true
+  speed_percent: 20
+  wait_seconds: 20.0
+  verify_in_position: true
+  verify_timeout_s: 25.0
+  staged_route:
+    - label: "Raise Safe Z"
+      pose: [490127, 0, 744000, 179999, 0, 0]
+      speed_percent: 20
+      wait_seconds: 6.0
+    - label: "Align Home Orientation"
+      pose: [444000, 0, 744000, 0, -89999, 179999]
+      speed_percent: 20
+      wait_seconds: 6.0
+
+modules:
+  voice: { enabled: true, show_in_ui: true }
+  cam1: { enabled: true, show_in_ui: true }
+  cam2: { enabled: true, show_in_ui: true }
+  claw_cam: { enabled: true, show_in_ui: true }
+  sensor_chart: { enabled: true, show_in_ui: true }
+  arm_monitor: { enabled: true, show_in_ui: true }
+  gripper: { enabled: true, show_in_ui: true }
+  validation: { enabled: false, show_in_ui: false }
+  quick_pick: { enabled: true, show_in_ui: true }
+  vla: { enabled: true, show_in_ui: false }
+  dataset_capture: { enabled: true, show_in_ui: false }
+  trajectory: { enabled: true, show_in_ui: true }
+  teach: { enabled: false, show_in_ui: false }   # panel hidden 2026-07-14 (teaching done via CLI; demo UI decluttered)
+  logs: { enabled: true, show_in_ui: true }
+  virtual_env: { enabled: false, show_in_ui: false }
+  virtual_env_data: { enabled: false, show_in_ui: false }
+
+sensor_api:
+  enabled: true
+  base_url: "http://192.168.1.100:5001"
+  endpoint: "/get_sensor"
+  poll_hz: 15
+  request_timeout_s: 1.0
+  history_points: 180
+  auto_range: true
+  auto_range_padding_ratio: 0.08
+  min_range_span: 300
+  y_min: 0
+  y_max: 1100
+  panel:
+    default_rect: { x: 10, y: 0, w: 4, h: 4 }
+
+trajectory:
+  enabled: true
+  max_points: 1800
+  auto_clear: false
+  fade_by_time: true
+  colorscale: "Turbo"
+  line_width: 2
+  show_head_marker: true
+
+home_pose: [444000, 0, 744000, 0, -89999, 179999]
+ready_pose: [490127, 0, 425027, 179999, 0, 0]
+
+ready_motion:
+  speed_percent: 80
+  verify_in_position: true
+  verify_timeout_s: 20.0
+
+# Shared settings for the model-free fallback pick->place (see config/objects.yaml `fallback:`).
+fallback:
+  objects: ["trapezoid", "board", "tweezers", "butter_knife"]
+  place_approach_pose: [490127, 0, 425027, 179999, 0, 0]   # = ready_pose for Phase 1; tune to above-drop-zone in Phase 3
+  speeds:
+    travel: 75      # approach / transit / lift
+    descend: 30     # pregrasp / grasp / place descend
+  settles:
+    grip_hold_s: 0.8
+  # straight-down pick synthesis offsets from grasp_pose (controller um)
+  hover_z_offset_um: 180000
+  pregrasp_z_offset_um: 35000
+  lift_z_offset_um: 200000
+  watchdog:
+    per_step_timeout_s: 25.0      # abort a move that never reaches in-position
+    motion_start_timeout_s: 3.0   # grace for in-position flag to clear after a move is issued
+    gripper_retries: 2
+
+# Deterministic three-object fallback and authoritative rig geometry.
+# Operators normally edit only pick_x_mm, pick_y_mm, and the two null
+# fixed_grasp_position values. The Z values below are calibrated constants.
+fixed_fallback:
+  hover_z_mm: 425
+  travel_speed_percent: 75
+  descend_speed_percent: 30
+  per_step_timeout_s: 25.0
+  motion_start_timeout_s: 3.0
+  fixed_release_position: [3072, 3072, 2048]
+  fixed_target_tolerance_ticks: 30
+  fixed_settle_ticks: 12
+  fixed_settle_hold_s: 1.2
+  fixed_min_close_ticks: 60
+  fixed_min_close_fingers: 2
+  place_approach_pose: [490116, -203991, 424908, 179999, 0, 0]
+  objects:
+    trapezoid:
+      pick_x_mm: 490.116       # operator-editable table X
+      pick_y_mm: 177.869       # operator-editable table Y
+      grasp_z_mm: 170.725      # fixed calibrated Z; normally do not edit
+      contact_dwell_s: 0.0
+      requires_grasp: true
+      fixed_grasp_position: null  # REQUIRED before running this fallback
+      lift_during_grasp: false
+      grasp_start_z_mm: null
+      release_z_mm: 180
+    board:
+      pick_x_mm: 505.0         # operator-editable table X
+      pick_y_mm: 214.0         # operator-editable table Y
+      grasp_z_mm: 130          # fixed calibrated Z; normally do not edit
+      contact_dwell_s: 1.0
+      requires_grasp: false
+      fixed_grasp_position: null  # intentional: board lifts with fingers open
+      lift_during_grasp: false
+      grasp_start_z_mm: null
+      release_z_mm: 180
+    butter_knife:
+      pick_x_mm: 490.1         # operator-editable table X
+      pick_y_mm: 0.0           # operator-editable table Y
+      grasp_z_mm: 128          # fixed calibrated Z; normally do not edit
+      contact_dwell_s: 3.0
+      requires_grasp: true
+      fixed_grasp_position: null  # REQUIRED before running this fallback
+      lift_during_grasp: true
+      grasp_start_z_mm: 170
+      release_z_mm: 175
+
+# Auto-run mode for the three-object demo (§3): predict→move loop + claw
+# arrival/servo + gated tail. Arrival/servo knobs live in
+# data/calibration/claw_servo.yaml (runtime-tunable from the UI).
+vla_auto:
+  checkpoint: "data/datasets/trapezoid_full_blind_nchc_20260707_024347"
+  preload_on_startup: true   # warm the RDT+SigLIP checkpoint at server boot (bg
+                             # thread) so the first CLI/UI auto-run skips the
+                             # ~6s cold load; false = load lazily on first run
+  blind_state: true          # REQUIRED with blind-trained checkpoints
+  hover_z_mm: 425            # travel/approach plane (= ready z, rig calib 2026-07-14)
+  seek_step_mm: 30           # descend step when seeking an object's vision plane
+                             # (board only detects below ~z365; per-object plane
+                             # comes from claw_servo_calibration.json)
+  stride: 64                  # chunk step used as the move target
+                             # (6 = six small steps toward the object;
+                             #  set 64 = jump straight to the model's endpoint,
+                             #  "一步到位" — then also raise max_step_mm)
+  max_step_mm: 60            # cap on a single VLA-driven stride (raise to ~250
+                             # for one-step-to-top with stride: 64)
+  vla_sanity_mm: 40          # #4 YOLO sanity gate: if the claw already sees the
+                             # object (fresh+confident) but the VLA wants a jump
+                             # bigger than this, distrust the model and hand over
+                             # to the claw servo. 0 = disable.
+  # Hands-off pick: grasp has NO time limit. It succeeds only after at least two
+  # fingers really close relative to their measured action-start positions and
+  # then converge; STOP is the escape. motor_pos [0,0,0] never counts.
+  grasp_prepare_min_close_ticks: 20  # deliberate close intent releases paused knife inference
+  grasp_min_close_ticks: 60     # final action-relative real close per finger
+  grasp_min_close_fingers: 2    # require a real close on at least 2/3 fingers
+  grasp_min_tracking_fingers: 2 # contact may block 1 finger; require 2 tracked
+  grasp_settle_ticks: 12        # |Δpos| under this (ticks) across the hold = "not moving"
+  grasp_settle_hold_s: 1.2      # fingers must stay still this long before auto-lift
+  grasp_settle_min_step: 20     # ignore the first N LSTM steps (baseline/home settle)
+  finger_settle_tracking_ticks: 30  # max |motor-goal| throughout settle window
+  release_min_excursion_ticks: 60   # goal + motor must both really move
+  release_min_excursion_fingers: 2  # default release evidence across 2 fingers
+  release_min_tracking_fingers: 3   # release settles only when all goals track
+  max_moves: 40
+  speed_percent: 40          # VLA/claw-servo corrections; CLI --speed overrides only this
+  travel_speed_percent: 80   # hover / lift / release travel / knife concurrent lift
+  descend_speed_percent: 40  # vision seek / pick descend / release-down
+  confirm_descend: false      # extra gate before the blind descent (UI button /
+                             # terminal Enter). Keep ON until every object's
+                             # grasp z is rig-taught; set false for a fully
+                             # hands-off demo flow.
+  max_holds: 30              # abort limit when no eligible saved target exists
+  claw_restart_after_lost_holds: 3  # one-second missing-box holds before restart
+  claw_post_restart_grace_holds: 2  # missing-box holds before verified fallback
+  objects:
+    # lstm: AGX finger actions (agx/lstm_gripper_service.py, ADR 0001).
+    # board is a lift-under pick: fingers stay open, no grasp (release only).
+    # trapezoid + butter_knife do a real tactile grasp then release.
+    trapezoid:
+      embed: "data/vla_embed_trapezoid_zh256.pt"
+      instruction: "拿起梯形"
+      mode: vla                  # default rung (ADR 0003): trapezoid rides the VLA policy
+      lstm: { grasp: "trapezoid_grasp", release: "trapezoid_release" }
+    board:
+      embed: "data/vla_embed_board_zh.pt"
+      instruction: "拿起電路板"
+      mode: locator              # default rung (ADR 0003): the deployed checkpoint is
+                                 # trapezoid-only, so board localizes via the side-cam locator
+      release_min_excursion_fingers: 1  # PCB_release mainly moves finger 1
+      manual_release_position: [2272, 3072, 2048]
+      lstm: { release: "PCB_release" }
+    butter_knife:
+      embed: "data/vla_embed_butter_knife_zh.pt"
+      instruction: "拿起奶油刀"
+      mode: vla                  # default rung (ADR 0003): moot — use_recorded_xy below
+                                 # skips approach entirely (fixed-xy blind descend)
+      grasp_backoff_mm: 0        # skip the old static 30mm pre-grasp backoff
+      use_recorded_xy: true      # today's demo: no trained VLA + unreliable
+                                 # locator → skip approach/servo, move to the
+                                 # fixed_fallback pick x,y and descend blind
+      manual_release_position: [2272, 3072, 2048]
+      lstm: { grasp: "knife_grasp", release: "knife_release" }
+
+teach:
+  enabled: true
+  poll_interval_ms: 100
+  save_dir: "data/teach_recordings"
+  default_replay_mode: "phase_axis_split"
+  raw_replay_return_pose: "ready"
+  phase_templates:
+    default:
+      hover_z_offset_um: 180000
+      pregrasp_z_offset_um: 35000
+      lift_z_offset_um: 200000
+      fast_percent: 60
+      slow_percent: 25
+      pregrasp_percent: 25
+      grasp_percent: 25
+      lift_percent: 60
+      settle_s: 0.4
+      grip_hold_s: 0.8
+      return_pose: "ready"
+      close_command: "c"
+      gripper_position_move_mode: "stepped"
+      gripper_open_step_ticks: 24
+      gripper_open_step_delay_s: 0.015
+      gripper_close_step_ticks: 10
+      gripper_close_step_delay_s: 0.03
+      open_after_replay: false
+    object_overrides: {}
+  phase_generation:
+    use_ready_pose: true
+    infer_target_from_name: true
+  dataset_capture:
+    enabled: true
+    output_root: "data/recordings"
+    image_fps: 6
+    telemetry_hz: 10
+    camera_streams: ["cam1_rgb", "cam1_depth", "cam2_rgb", "cam2_depth", "claw_rgb"]
+  auto_label:
+    enabled: true
+    streams: ["claw_rgb"]
+    model_path: "data/models/yolo/yolo12sbest.pt"
+    conf: 0.35
+    export_format: "cvat_yolo"
+
+virtual_env:
+  enabled: true
+  base_url: "http://127.0.0.1:8765"  # set the real sim host in config/env/ubuntu.local.yaml
+  embed_path: "/ui"
+  webrtc_path: "/webrtc/"
+  console_path: "/ui"
+  display_path_template: "/display/{view}.jpg"
+  desired_views: ["d435_left", "d435_right", "wrist"]
+
+cameras:
+  cam1:
+    serial: "REPLACE_CAM1_SERIAL"
+    enabled: true
+    enable_depth: true
+    label: "Cam1"
+  cam2:
+    serial: "REPLACE_CAM2_SERIAL"
+    enabled: true
+    enable_depth: true
+    label: "Cam2"
+  claw:
+    enabled: true
+    source: 4
+    label: "Claw Cam"
+    performance_profile: "balanced"
+    # capture_* MUST be a NATIVE mode of the camera or the UVC stream stalls and
+    # our worker starts churning reopen()s (the "claw cam keeps dropping" bug).
+    # The Realtek USB UVC claw advertises exactly ONE mode: 1920x1080 MJPG @
+    # 24/15/10 fps (check with `v4l2-ctl -d <by-id> --list-formats-ext`). So all
+    # profiles capture 1920x1080 at a listed fps and just downscale in software
+    # for streaming/inference (stream_*/infer_* below stay small — cheap resize).
+    profiles:
+      quality:
+        capture_w: 1920
+        capture_h: 1080
+        stream_w: 640
+        stream_h: 360
+        infer_w: 640
+        infer_h: 360
+        stream_fps: 15
+        jpeg_quality: 65
+        infer_interval_s: 0.12
+      balanced:
+        capture_w: 1920
+        capture_h: 1080
+        stream_w: 424
+        stream_h: 240
+        infer_w: 424
+        infer_h: 240
+        stream_fps: 15
+        jpeg_quality: 50
+        infer_interval_s: 0.12
+      low_latency:
+        capture_w: 1920
+        capture_h: 1080
+        stream_w: 320
+        stream_h: 180
+        infer_w: 320
+        infer_h: 180
+        stream_fps: 10
+        jpeg_quality: 40
+        infer_interval_s: 0.18
+    overrides: {}
+    device: "auto"
+    enable_yolo: true
+    model_path: "data/models/yolo/yolo12sbest.pt"
+    conf: 0.6
+  resolution_w: 424
+  resolution_h: 240
+  fps: 15
+  init_delay_s: 2.0

@@ -1,0 +1,37 @@
+# Arrival/servo knobs (runtime-tunable from the UI).
+#
+# NOTE 2026-07-14: the RIG CALIBRATION lives in claw_servo_calibration.json
+# (per-object jacobian + setpoint + measured z, from servo_calibrate.py at the
+# arm). When that file exists, ArrivalServo loads it as authoritative — the
+# jacobian below is only the offline recordings fit kept as fallback, and
+# `calibrated` is forced true at load.
+calibrated: false
+hover_z: 425.0            # travel/approach plane (= ready z; rig calib z for trap/knife)
+jacobian:
+  default:                # offline pooled fit — fallback only, see NOTE
+  - - -0.001845
+    - 2.6e-05
+  - - -0.000684
+    - 0.003057
+setpoint_cy_at_hover: {}  # superseded by claw_servo_calibration.json setpoints
+
+# --- arrival knobs ---
+conf_floor: 0.5
+# Tolerance in MILLIMETERS, converted per object through its jacobian
+# (tol_cx = |J00|*mm ≈ 0.021, tol_cy = |J11|*mm ≈ 0.037 at 12 mm). Set 0 to
+# fall back to the manual pixel tolerances below.
+arrival_tol_mm: 12.0
+tol_cx: 0.06              # fallback only (no jacobian / arrival_tol_mm: 0)
+tol_cy: 0.06
+stay_mm: 15.0             # condition C: VLA next-step |dxy| below this = "wants to stay"
+clip_margin: 0.005
+max_detect_age_s: 1.0
+
+# --- servo knobs ---
+# servo_max_step_mm caps EACH claw-takeover correction (J⁻¹·err). Bumped
+# 12→30→35 (2026-07-15) so a ~160 mm handover closes in ~5 steps not ~13+.
+# Live-tunable from the UI 'srv' box (cap raised to 60). NOT stride/max_step_mm
+# (those are VLA-only, dead once the servo engages).
+servo_max_step_mm: 80.0
+servo_deadband_mm: 2.0
+max_corrections: 10

@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Machine-specific config (copy config/env/ubuntu.example.yaml)
+config/env/*.local.yaml
+
+# Data, recordings, runtime output
+data/*
+!data/calibration/
+data/calibration/*.jpg
+dist/
+*.log
+nohup.out
+
+# Model weights (published as GitHub Release assets)
+*.pt
+*.pth
+*.pkl
+*.ckpt
+*.safetensors
+*.zip
+*.tar
+*.tar.gz
+
+# Tactile / CSV recordings
+*.csv
+
+# Personal tooling / AI agent state
+.claude/
+.agents/
+.codex/
+.remember/
+.superpowers/
+.antigravitycli/
+skills-lock.json
+HANDOFF*.md
+handoff_*
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

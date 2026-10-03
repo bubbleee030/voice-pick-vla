@@ -1,0 +1,122 @@
+{
+  "trapezoid": {
+    "yolo_class": "trapezoid_white",
+    "hover_z_mm": 425.0,
+    "setpoint_cx": 0.5311,
+    "setpoint_cy": 0.5821,
+    "jacobian_world_to_pixel": [
+      [
+        -0.0017146589800869675,
+        -7.573531354504331e-05
+      ],
+      [
+        -8.478657066272532e-05,
+        0.003042317193021134
+      ]
+    ],
+    "correction_matrix_pixel_to_world_mm": [
+      [
+        -582.4893270084165,
+        -14.50046429044956
+      ],
+      [
+        -16.233439628837328,
+        328.2927097972908
+      ]
+    ],
+    "coupling_x_into_cy": 0.049,
+    "coupling_y_into_cx": 0.025,
+    "probe_jog_mm_requested": 20.0,
+    "probe_x_actual_mm": [
+      20.634000000000015,
+      0.0,
+      0.0010000000000331966
+    ],
+    "probe_y_actual_mm": [
+      0.0010000000000331966,
+      20.264,
+      0.0
+    ],
+    "calibrated_at": "2026-07-14T20:18:08"
+  },
+  "knife": {
+    "yolo_class": "knife",
+    "hover_z_mm": 425.0,
+    "setpoint_cx": 0.3956,
+    "setpoint_cy": 0.4596,
+    "jacobian_world_to_pixel": [
+      [
+        -0.0015416189343068212,
+        -3.3994143672947325e-05
+      ],
+      [
+        0.0003635639525000205,
+        0.0031170199973903625
+      ]
+    ],
+    "correction_matrix_pixel_to_world_mm": [
+      [
+        -650.341400236255,
+        -7.092607366845938
+      ],
+      [
+        75.85472346736432,
+        321.64651404456885
+      ]
+    ],
+    "coupling_x_into_cy": 0.236,
+    "coupling_y_into_cx": 0.011,
+    "probe_jog_mm_requested": 20.0,
+    "probe_x_actual_mm": [
+      19.884000000000015,
+      0.0,
+      0.0
+    ],
+    "probe_y_actual_mm": [
+      0.0,
+      20.025,
+      0.0
+    ],
+    "calibrated_at": "2026-07-14T20:25:06"
+  },
+  "board": {
+    "yolo_class": "board",
+    "hover_z_mm": 364.9,
+    "setpoint_cx": 0.53,
+    "setpoint_cy": 0.5891,
+    "jacobian_world_to_pixel": [
+      [
+        -0.0016869996737333768,
+        -2.8834267268101726e-05
+      ],
+      [
+        -4.6887110187763705e-05,
+        0.0035420983730398425
+      ]
+    ],
+    "correction_matrix_pixel_to_world_mm": [
+      [
+        -592.634259325038,
+        -4.824308312743589
+      ],
+      [
+        -7.844758922991163,
+        282.2546685134978
+      ]
+    ],
+    "coupling_x_into_cy": 0.028,
+    "coupling_y_into_cx": 0.008,
+    "probe_jog_mm_requested": 20.0,
+    "probe_x_actual_mm": [
+      19.97800000000001,
+      0.0,
+      0.0
+    ],
+    "probe_y_actual_mm": [
+      0.0,
+      20.125,
+      0.0
+    ],
+    "calibrated_at": "2026-07-14T20:33:19"
+  }
+}

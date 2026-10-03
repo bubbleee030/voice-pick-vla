@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Pick Legacy Recorder</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="legacy-body">
+    <main class="legacy-shell">
+        <header class="legacy-header">
+            <div>
+                <p class="eyebrow">Fallback UI</p>
+                <h1>Legacy Recorder</h1>
+            </div>
+            <div class="legacy-actions">
+                <a class="btn ghost" href="/modern">Open New UI</a>
+            </div>
+        </header>
+
+        <section class="legacy-grid">
+            <article class="panel legacy-panel">
+                <div class="panel-head">
+                    <h2>Camera Preview</h2>
+                </div>
+                <div class="legacy-camera-grid">
+                    <div class="camera-card">
+                        <h3>Cam1 RGB</h3>
+                        <img src="/stream/cam1/rgb" alt="Cam1 RGB">
+                    </div>
+                    <div class="camera-card">
+                        <h3>Cam1 Depth</h3>
+                        <img src="/stream/cam1/depth" alt="Cam1 Depth">
+                    </div>
+                    <div class="camera-card">
+                        <h3>Cam2 RGB</h3>
+                        <img src="/stream/cam2/rgb" alt="Cam2 RGB">
+                    </div>
+                    <div class="camera-card">
+                        <h3>Cam2 Depth</h3>
+                        <img src="/stream/cam2/depth" alt="Cam2 Depth">
+                    </div>
+                    <div class="camera-card claw">
+                        <h3>Claw</h3>
+                        <img src="/stream/claw/rgb" alt="Claw">
+                    </div>
+                </div>
+            </article>
+
+            <article class="panel legacy-panel">
+                <div class="panel-head">
+                    <h2>Dataset Capture</h2>
+                </div>
+                <div class="form-grid">
+                    <label>
+                        <span>Object</span>
+                        <select id="legacy-capture-object"></select>
+                    </label>
+                    <label>
+                        <span>Duration (s)</span>
+                        <input type="number" id="legacy-capture-duration" value="30" min="0" step="1">
+                    </label>
+                    <label>
+                        <span>Image FPS</span>
+                        <input type="number" id="legacy-capture-fps" value="6" min="1" step="1">
+                    </label>
+                    <label>
+                        <span>Telemetry Hz</span>
+                        <input type="number" id="legacy-capture-telemetry" value="10" min="1" step="1">
+                    </label>
+                </div>
+                <div class="stream-selectors">
+                    <label><input type="checkbox" value="cam1_rgb" checked> cam1_rgb</label>
+                    <label><input type="checkbox" value="cam1_depth" checked> cam1_depth</label>
+                    <label><input type="checkbox" value="cam2_rgb" checked> cam2_rgb</label>
+                    <label><input type="checkbox" value="cam2_depth" checked> cam2_depth</label>
+                    <label><input type="checkbox" value="claw_rgb" checked> claw_rgb</label>
+                </div>
+                <div class="command-row">
+                    <button class="btn primary" id="legacy-capture-start">Start Capture</button>
+                    <button class="btn danger" id="legacy-capture-stop">Stop Capture</button>
+                </div>
+                <pre class="state-box" id="legacy-capture-state">Capture idle.</pre>
+            </article>
+
+            <article class="panel legacy-panel">
+                <div class="panel-head">
+                    <h2>Teach</h2>
+                </div>
+                <div class="form-grid">
+                    <label>
+                        <span>Name</span>
+                        <input type="text" id="legacy-teach-name" placeholder="recording_001">
+                    </label>
+                    <label>
+                        <span>Speed %</span>
+                        <input type="number" id="legacy-teach-speed" value="30" min="1" max="100">
+                    </label>
+                    <label>
+                        <span>Replay</span>
+                        <select id="legacy-teach-replay-select"></select>
+                    </label>
+                </div>
+                <div class="command-row">
+                    <button class="btn primary" id="legacy-teach-start">Start Teach</button>
+                    <button class="btn" id="legacy-teach-waypoint">Waypoint</button>
+                    <button class="btn" id="legacy-teach-open">Open</button>
+                    <button class="btn" id="legacy-teach-close">Close</button>
+                    <button class="btn danger" id="legacy-teach-stop">Stop Teach</button>
+                    <button class="btn primary" id="legacy-teach-replay">Replay</button>
+                </div>
+                <div class="list-box" id="legacy-teach-list"></div>
+            </article>
+
+            <article class="panel legacy-panel">
+                <div class="panel-head">
+                    <h2>Runtime</h2>
+                </div>
+                <div class="command-row">
+                    <button class="btn primary" id="legacy-arm-connect">Connect Arm</button>
+                    <button class="btn" id="legacy-arm-home">Home</button>
+                    <button class="btn" id="legacy-arm-ready">Ready</button>
+                    <button class="btn danger" id="legacy-arm-stop">Stop</button>
+                </div>
+                <pre class="state-box" id="legacy-health-box">Waiting for status.</pre>
+                <div class="log-box" id="legacy-log-box"></div>
+            </article>
+        </section>
+    </main>
+
+    <script src="legacy.js"></script>
+</body>
+</html>

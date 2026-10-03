@@ -1,0 +1,32 @@
+demo:
+  arm:
+    connections:
+      - host: "192.168.1.232"
+        port: 502
+        label: "direct_232"
+      - host: "192.168.1.233"
+        port: 502
+        label: "direct_233"
+  gripper:
+    agx_ip: "192.168.1.100"
+    agx_port: 5002
+    endpoints:
+      - host: "192.168.1.100"
+        port: 5002
+        label: "agx_192_168_1_100"
+  sensor_api:
+    base_url: "http://192.168.1.100:5001"
+  cameras:
+    cam1:
+      serial: "REPLACE_CAM1_SERIAL"
+    cam2:
+      serial: "REPLACE_CAM2_SERIAL"
+    claw:
+      source: 0
+      device: "/dev/video0"
+      model_path: "data/models/yolo/yolo12sbest.pt"
+
+modbus:
+  connection:
+    host: "127.0.0.1"
+    port: 1502

@@ -1,0 +1,279 @@
+# -*- coding: utf-8 -*-
+import sys
+import numpy as np
+try:
+    import numpy._core
+except ModuleNotFoundError:
+    from types import ModuleType
+    _core = ModuleType('numpy._core')
+    sys.modules['numpy._core'] = _core
+    import numpy.core.multiarray as _multiarray
+    sys.modules['numpy._core.multiarray'] = _multiarray
+    _core.multiarray = _multiarray
+import threading
+from dynamixel_sdk import *
+from time import sleep, time
+import serial
+import torch
+import torch.nn as nn
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+import joblib
+
+
+class GripperControllerLSTM(nn.Module):
+    def __init__(self, input_size=15, hidden_size=64, num_layers=2, output_size=3):
+        super(GripperControllerLSTM, self).__init__()
+        self.lstm = nn.LSTM(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            batch_first=True, 
+            dropout=0.2 if num_layers > 1 else 0.0
+        )
+        self.fc = nn.Linear(hidden_size, output_size)
+        
+    def forward(self, x, lengths):
+        x_packed = pack_padded_sequence(x, lengths.cpu(), batch_first=True, enforce_sorted=False)
+        out_packed, _ = self.lstm(x_packed)
+        out, _ = pad_packed_sequence(out_packed, batch_first=True)
+        output = self.fc(out)
+        return output
+
+ADDR_TORQUE_ENABLE = 64
+ADDR_GOAL_POSITION = 116
+ADDR_PRESENT_POSITION = 132
+ADDR_TELEMETRY_START  = 124  
+LEN_TELEMETRY  = 8           
+BAUDRATE_motor = 57600
+DEVICENAME_motor = '/dev/ttyUSB2'
+#DEVICENAME_motor = '/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FT6RWC9P-if00-port0'
+TORQUE_ENABLE = 1
+TORQUE_DISABLE = 0
+DXL_IDS = [1, 2, 3]
+
+portHandler   = PortHandler(DEVICENAME_motor)
+packetHandler = PacketHandler(2.0)
+portHandler.openPort()
+portHandler.setBaudRate(BAUDRATE_motor)
+
+for i in DXL_IDS:
+    packetHandler.reboot(portHandler, i)
+sleep(1)
+
+group_read = GroupSyncRead(portHandler, packetHandler, ADDR_PRESENT_POSITION, 4)
+
+group_telemetry = GroupSyncRead(portHandler, packetHandler, ADDR_TELEMETRY_START, LEN_TELEMETRY)
+
+for dxl_id in DXL_IDS:
+    group_read.addParam(dxl_id)    
+    group_telemetry.addParam(dxl_id) # 註冊感測讀取 ID
+
+for i in DXL_IDS:
+    packetHandler.write1ByteTxRx(portHandler, i, ADDR_TORQUE_ENABLE, TORQUE_ENABLE)
+
+BAUDRATE_sensor   = 115200
+DEVICENAME_sensor = '/dev/ttyUSB0' 
+try:
+    ser = serial.Serial(DEVICENAME_sensor, BAUDRATE_sensor, timeout=1)
+    sleep(2)
+except Exception as e:
+    print(f" 無法連接感測器: {e}")
+    ser = None
+
+com_lock   = threading.Lock()
+state_lock = threading.Lock()
+running = True
+MOTOR_LIMITS = [
+    (1872, 4272),  
+    (1872, 4272),  
+    (848, 3248)    
+]
+
+first_val, second_val, third_val = 0, 0, 0 
+latest_motor_pos = [2972, 2972, 1948]
+latest_motor_pwm = [0.0, 0.0, 0.0]
+latest_motor_cur = [0.0, 0.0, 0.0]
+latest_motor_vel = [0.0, 0.0, 0.0]
+def background_worker():
+    global running, first_val, second_val, third_val
+    global latest_motor_pos, latest_motor_pwm, latest_motor_cur, latest_motor_vel
+    
+    while running:
+        if ser and ser.in_waiting > 0:
+            try:
+                line = ser.readline().decode('utf-8', errors='ignore').strip()
+                parts = line.split()
+                if len(parts) >= 3:
+                     with state_lock:
+                        first_val = int(parts[0])
+                        second_val = int(parts[1])
+                        third_val = int(parts[2])
+            except (ValueError, IndexError):
+                pass
+        
+        with com_lock:
+            pos_comm_result = group_read.txRxPacket()
+            tel_comm_result = group_telemetry.txRxPacket()
+            
+            cur_pos = []
+            cur_pwm = []
+            cur_cur = []
+            cur_vel = []
+            
+            for dxl_id in DXL_IDS:
+                p = group_read.getData(dxl_id, ADDR_PRESENT_POSITION, 4)
+                if p > 0x7FFFFFFF:
+                    p -= 0x100000000
+                cur_pos.append(p)
+                
+                raw_pwm = group_telemetry.getData(dxl_id, 124, 2)
+                raw_cur = group_telemetry.getData(dxl_id, 126, 2)
+                raw_vel = group_telemetry.getData(dxl_id, 128, 4)
+                
+                if raw_pwm > 32767: raw_pwm -= 65536
+                if raw_cur > 32767: raw_cur -= 65536
+                if raw_vel > 2147483647: raw_vel -= 4294967296
+                
+                pwm_val = round(raw_pwm * 0.113, 2)
+                cur_val = round(raw_cur * 1.0, 1)
+                vel_val = round(raw_vel * 0.229, 2)
+                
+                cur_pwm.append(pwm_val)
+                cur_cur.append(cur_val)
+                cur_vel.append(vel_val)
+                
+        with state_lock:
+            latest_motor_pos = list(cur_pos)
+            latest_motor_pwm = list(cur_pwm)
+            latest_motor_cur = list(cur_cur)
+            latest_motor_vel = list(cur_vel)
+        
+        sleep(0.01) 
+bg_thread = threading.Thread(target=background_worker, daemon=True)
+bg_thread.start()
+
+ACTION_TYPE = input("請選擇運行模式 (1: grasp, 2: release): ").strip()
+ACTION_TYPE = 'grasp' if ACTION_TYPE == '1' else 'release'
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f"使用的計算設備: {device} | 模式: {ACTION_TYPE}")
+try:
+    scaler_x = joblib.load(f'scaler_x_trapezoid_{ACTION_TYPE}.pkl')
+    scaler_y = joblib.load(f'scaler_y_trapezoid_{ACTION_TYPE}.pkl')
+    print(f"成功載入標準化 Scaler ({ACTION_TYPE})")
+except Exception as e:
+    print(f"無法載入 Scaler 檔案: {e}")
+    quit()
+
+
+model = GripperControllerLSTM(input_size=15, hidden_size=64, num_layers=2, output_size=3).to(device)
+try:
+    model.load_state_dict(torch.load(f'LSTM_trapezoid_{ACTION_TYPE}.pth', map_location=device))
+    model.eval()
+    print(f"成功載入 LSTM 模型權重 ({ACTION_TYPE})")
+except Exception as e:
+    print(f"無法載入模型權重: {e}")
+    quit()
+
+if ACTION_TYPE == 'grasp':
+    origin_pos = [2972, 2972, 1948] 
+else:
+    current_positions = []
+    for dxl_id in DXL_IDS:
+        dxl_present_position, dxl_comm_result, dxl_error = packetHandler.read4ByteTxRx(
+            portHandler, dxl_id, ADDR_PRESENT_POSITION
+        )
+        
+        if dxl_comm_result != COMM_SUCCESS:
+            print(f"❌ 馬達 {dxl_id} 讀取失敗: {packetHandler.getTxRxResult(dxl_comm_result)}")
+        else:
+            if dxl_present_position > 0x7FFFFFFF:
+                dxl_present_position -= 0x100000000
+        
+        current_positions.append(dxl_present_position)
+        origin_pos = [current_positions[0], current_positions[1], current_positions[2]]
+
+
+def main():
+    global running
+    
+    print("\n==============================================")
+    print(f"提示：自動控制即將開始 [{ACTION_TYPE}]，請確認測試物體已放置妥當。")
+    print("==============================================")
+    input("請按 [Enter] 鍵以啟動 LSTM 自主動作...")
+    print("\n正在將指爪移回起始點...")
+    with com_lock:
+        for idx, dxl_id in enumerate(DXL_IDS):
+            packetHandler.write4ByteTxRx(portHandler, dxl_id, ADDR_GOAL_POSITION, origin_pos[idx])
+            sleep(1)
+    sleep(1.0)
+    print("歸位完成。")
+    TOTAL_STEPS = 100        
+    SLEEP_INTERVAL = 0.25     
+    
+    seq_history = []
+
+    with state_lock:
+        prev_val = [first_val, second_val, third_val]
+        
+    print("\n自動控制啟動！")
+    
+    for step in range(1, TOTAL_STEPS + 1):
+        with state_lock:
+            curr_pos = list(latest_motor_pos)
+            curr_pwm = list(latest_motor_pwm)
+            curr_cur = list(latest_motor_cur)
+            curr_vel = list(latest_motor_vel)
+            curr_val = [first_val, second_val, third_val]
+            
+        val_diff = [curr_val[i] - prev_val[i] for i in range(3)]
+        feature_vector = (
+            val_diff + 
+            [curr_pos[0], curr_pwm[0], curr_cur[0], curr_vel[0]] +
+            [curr_pos[1], curr_pwm[1], curr_cur[1], curr_vel[1]] +
+            [curr_pos[2], curr_pwm[2], curr_cur[2], curr_vel[2]]
+        )
+        
+        feature_scaled = scaler_x.transform([feature_vector])[0]
+        seq_history.append(feature_scaled)
+        
+        inputs_tensor = torch.from_numpy(np.array([seq_history], dtype=np.float32)).to(device)
+        lengths_tensor = torch.tensor([len(seq_history)], dtype=torch.long)
+        
+        with torch.no_grad():
+            output_tensor = model(inputs_tensor, lengths_tensor)
+            pred_scaled = output_tensor[0, -1, :].cpu().numpy()
+            
+        pred_pos = scaler_y.inverse_transform([pred_scaled])[0]
+        
+        target_pos = []
+        for i in range(3):
+            raw_target = int(pred_pos[i])
+            clipped_target = max(MOTOR_LIMITS[i][0], min(raw_target, MOTOR_LIMITS[i][1]))
+            target_pos.append(clipped_target)
+            
+        with com_lock:
+            for idx, dxl_id in enumerate(DXL_IDS):
+                packetHandler.write4ByteTxRx(portHandler, dxl_id, ADDR_GOAL_POSITION, target_pos[idx])
+                
+        print(f"Step [{step:03d}/{TOTAL_STEPS}] | "
+              f"觸覺壓力: {curr_val} | "
+              f"當前位置: {curr_pos} | "
+              f"當前電流: {curr_cur} | "
+              f"當前速度: {curr_vel} | "
+              f"當前pwm: {curr_pwm} | "
+              f"模型預測pos: {[round(float(x), 1) for x in pred_pos]}")
+        
+        prev_val = list(curr_val)
+        
+        sleep(SLEEP_INTERVAL)
+        
+    print("\n自動控制序列已完成！")
+    
+    running = False
+    print("👋 程式結束。")
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        running = False
+        print("\n偵測到中斷，正在關閉系統...")

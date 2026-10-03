@@ -1,0 +1,14 @@
+# Voice Pick Ubuntu Bundle
+
+numpy>=1.24
+opencv-python>=4.8
+PyYAML>=6.0
+pyrealsense2
+ultralytics>=8.1
+pyModbusTCP>=0.2
+tqdm>=4.65
+Pillow>=10.0
+requests>=2.31
+Flask>=2.3
+flask-socketio>=5.3
+simple-websocket>=0.10

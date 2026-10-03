@@ -1,0 +1,72 @@
+# Modbus connection and robot arm control parameters.
+
+connection:
+  host: "127.0.0.1"
+  port: 1502
+  unit_id: 2
+  timeout_s: 1.0
+  connect_retries: 3
+  connect_retry_delay_s: 2.0
+
+registers:
+  servo_on_off: 0x0010
+  alarm_reset_1: 0x0026
+  alarm_reset_2: 0x0027
+  alarm_reset_3: 0x0020
+  group_error_reset: 0x0180
+  motion_command: 0x0300
+  robot_speed_override: 0x0246
+  in_position_flag: 0x031F
+  acceleration: 0x030A
+  deceleration: 0x030C
+  speed_percent: 0x0324
+  target_pose_base: 0x0330
+  user_frame: 0x033C
+  target_posture: 0x033D
+  move_mode: 0x033E
+  tool_frame: 0x033F
+  current_pose_base: 0x00F0
+
+commands:
+  home: 1405
+  motion_stop: 1000
+  p2p_move: 301      # GO MovP: joint-interpolated; speed% = % of JOINT speeds,
+                     # so Cartesian mm/s varies with pose geometry
+  linear_move: 302   # GO MovL: straight Cartesian line; speed% maps to a
+                     # consistent tool speed. Can alarm near singularities.
+
+motion:
+  # Default motion command for move_to(): false = MovP (301), true = MovL (302).
+  # Callers can override per move with move_to(..., linear=True/False).
+  use_linear_move: false
+  move_mode: 3
+  default_speed_percent: 20
+  settle_wait_s: 2.0
+  servo_settle_s: 1.0
+  verify_speed_write: true
+  speed_verify_attempts: 3       # retry 0x0324 readback before refusing GO
+  speed_verify_retry_s: 0.05     # delay between bounded readback attempts
+  set_robot_speed_override: true
+  robot_speed_override_percent: 100
+  # ACC/DEC ramps (0.01 um/ms^2; raw 100 = 1000 mm/s^2). Arm ships with
+  # acc=100 dec=10 — the weak DEC is the long slow-down at the end of every
+  # move. To sharpen stops: set_deceleration: true, deceleration_raw: 50-100.
+  # There is NO way to disable the ramp entirely (servo protection).
+  set_acceleration: true
+  acceleration_raw: 300
+  set_deceleration: true
+  deceleration_raw: 70
+  set_target_posture: false
+  target_posture: 0
+  set_frames: false
+  user_frame: 0
+  tool_frame: 0
+  protocol_max_speed_percent: 100
+
+home_pose: [444000, 0, 744000, 0, -89999, 179999]
+
+safety:
+  home_before_task: true
+  home_after_task: true
+  require_confirmation: true
+  max_speed_percent: 100

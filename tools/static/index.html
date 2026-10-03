@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Pick Control Station</title>
+    <meta name="description" content="Ubuntu main-control station for voice_pick">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+    <script>
+        if (!window.io) {
+            document.write('<script src="/socket.io.min.js"><\/script>');
+        }
+    </script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="topbar">
+        <div>
+            <p class="eyebrow">Ubuntu Main Control</p>
+            <h1>Voice Pick Control Station</h1>
+        </div>
+        <div class="topbar-meta">
+            <div class="pill" id="profile-pill">Profile: --</div>
+            <div class="pill" id="launcher-pill">Launcher: --</div>
+            <div class="pill" id="capture-pill">Capture: idle</div>
+            <a class="pill pill-link" href="/classic">Legacy Recorder</a>
+            <button class="pill pill-button" id="btn-layout-reset" type="button">Reset Layout</button>
+            <button class="pill pill-button" id="btn-camera-layout-reset" type="button">Reset Cameras</button>
+        </div>
+    </header>
+
+    <main class="dashboard" id="dashboard">
+        <section class="panel overview layout-panel" data-panel="overview" draggable="true">
+            <div class="panel-head drag-handle">
+                <h2>System Overview</h2>
+                <div class="panel-actions">
+                    <button class="btn ghost" id="btn-refresh-health">Refresh</button>
+                </div>
+            </div>
+            <div class="overview-grid layout-container" data-layout-group="overview-grid">
+                <div class="stat-card customizable-card" data-card-id="overview-arm" data-module="arm_monitor" draggable="true">
+                    <span class="stat-label">Arm</span>
+                    <span class="stat-value" id="arm-connection-label">Disconnected</span>
+                    <span class="stat-meta" id="arm-connection-meta">No link</span>
+                </div>
+                <div class="stat-card customizable-card" data-card-id="overview-gripper" data-module="gripper" draggable="true">
+                    <span class="stat-label">Gripper</span>
+                    <span class="stat-value" id="gripper-endpoint">Unavailable</span>
+                    <span class="stat-meta" id="gripper-meta">No endpoint</span>
+                </div>
+                <div class="stat-card customizable-card" data-card-id="overview-cameras" data-modules-any="cam1 cam2" draggable="true">
+                    <span class="stat-label">Cameras</span>
+                    <span class="stat-value" id="camera-summary">--</span>
+                    <span class="stat-meta" id="camera-meta">Awaiting status</span>
+                </div>
+                <div class="stat-card customizable-card" data-card-id="overview-claw" data-module="claw_cam" draggable="true">
+                    <span class="stat-label">Claw Cam</span>
+                    <span class="stat-value" id="claw-summary">--</span>
+                    <span class="stat-meta" id="claw-meta">Awaiting status</span>
+                </div>
+            </div>
+            <div class="module-grid" id="module-grid"></div>
+            <div class="command-row">
+                <button class="btn primary" id="btn-arm-connect">Connect Arm</button>
+                <button class="btn" id="btn-arm-home">Home</button>
+                <button class="btn" id="btn-arm-ready">Ready</button>
+                <button class="btn danger" id="btn-arm-stop">Stop</button>
+                <select id="speed-preset">
+                    <option value="medium">Speed: medium</option>
+                    <option value="low">Speed: low</option>
+                    <option value="high">Speed: high</option>
+                    <option value="custom">Speed: custom</option>
+                </select>
+                <input type="number" id="custom-speed" min="1" max="100" value="60" title="Custom speed percent">
+            </div>
+            <div class="command-row" data-module="quick_pick"
+                data-quick-fallback-group>
+                <span class="stat-label" style="align-self:center;">Fallback Pick&rarr;Place:</span>
+                <button class="btn primary" id="btn-fallback-trapezoid"
+                    data-quick-fallback-object="trapezoid"
+                    title="Model-free deterministic pick and place">Trapezoid</button>
+                <button class="btn primary" id="btn-fallback-board"
+                    data-quick-fallback-object="board"
+                    title="Model-free deterministic pick and place">Board</button>
+                <button class="btn primary" id="btn-fallback-butter_knife"
+                    data-quick-fallback-object="butter_knife"
+                    title="Fixed-coordinate deterministic pick and place">Butter Knife</button>
+            </div>
+            <div class="command-row" data-module="quick_pick">
+                <button class="btn primary" id="btn-finger-stage-complete"
+                    type="button" hidden
+                    title="Available only during an eligible grasp or release stage">Complete Finger Action</button>
+            </div>
+        </section>
+
+        <section class="panel recording layout-panel" data-panel="recording"
+            data-module="dataset_capture" draggable="true">
+            <div class="panel-head drag-handle">
+                <h2>Recording Console</h2>
+            </div>
+            <div class="form-grid">
+                <label>
+                    <span>Object</span>
+                    <select id="capture-object"></select>
+                </label>
+                <label>
+                    <span>Duration (s)</span>
+                    <input type="number" id="capture-duration" value="30" min="0" step="1">
+                </label>
+                <label>
+                    <span>Image FPS</span>
+                    <input type="number" id="capture-fps" value="6" min="1" step="1">
+                </label>
+                <label>
+                    <span>Telemetry Hz</span>
+                    <input type="number" id="capture-telemetry-hz" value="10" min="1" step="1">
+                </label>
+                <label class="wide">
+                    <span>Notes</span>
+                    <input type="text" id="capture-notes" placeholder="Session notes">
+                </label>
+            </div>
+            <div class="stream-selectors">
+                <label><input type="checkbox" value="cam1_rgb" checked> cam1_rgb</label>
+                <label><input type="checkbox" value="cam1_depth" checked> cam1_depth</label>
+                <label><input type="checkbox" value="cam2_rgb" checked> cam2_rgb</label>
+                <label><input type="checkbox" value="cam2_depth" checked> cam2_depth</label>
+                <label><input type="checkbox" value="claw_rgb" checked> claw_rgb</label>
+            </div>
+            <div class="command-row">
+                <button class="btn primary" id="btn-capture-start">Start Dataset Capture</button>
+                <button class="btn danger" id="btn-capture-stop">Stop Capture</button>
+            </div>
+            <pre class="state-box" id="capture-state-box">Capture idle.</pre>
+        </section>
+
+        <section class="panel teach layout-panel" data-panel="teach" data-module="teach" draggable="true">
+            <div class="panel-head drag-handle">
+                <h2>Teach & Replay</h2>
+            </div>
+            <div class="form-grid">
+                <label>
+                    <span>Teach Name</span>
+                    <input type="text" id="teach-name" placeholder="trapezoid_pick_v5">
+                </label>
+                <label>
+                    <span>Waypoint Speed %</span>
+                    <input type="number" id="teach-speed" value="30" min="1" max="100">
+                </label>
+                <label>
+                    <span>Replay Recording</span>
+                    <select id="teach-replay-select"></select>
+                </label>
+                <label>
+                    <span>Replay Mode</span>
+                    <select id="replay-mode">
+                        <option value="phase_axis_split">phase_axis_split</option>
+                        <option value="raw">raw</option>
+                    </select>
+                </label>
+            </div>
+            <div class="command-row">
+                <button class="btn primary" id="btn-teach-start">Start Teach</button>
+                <button class="btn" id="btn-teach-waypoint">Save Waypoint</button>
+                <button class="btn" id="btn-teach-grip-close">Waypoint + Close</button>
+                <button class="btn" id="btn-teach-grip-open">Waypoint + Open</button>
+                <button class="btn danger" id="btn-teach-stop">Stop Teach</button>
+                <button class="btn primary" id="btn-teach-replay">Replay Selected</button>
+            </div>
+            <div class="teach-grid layout-container" data-layout-group="teach-grid">
+                <div class="customizable-card teach-card" data-card-id="teach-waypoints-card" draggable="true">
+                    <h3>Waypoints</h3>
+                    <div class="list-box" id="teach-waypoints"></div>
+                </div>
+                <div class="customizable-card teach-card" data-card-id="teach-recordings-card" draggable="true">
+                    <h3>Recordings</h3>
+                    <div class="list-box" id="teach-list"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel camera-wall layout-panel" data-panel="camera-wall" data-modules-any="cam1 cam2 claw_cam" draggable="true">
+            <div class="panel-head drag-handle">
+                <h2>Camera Wall</h2>
+            </div>
+            <div class="camera-grid layout-container" id="camera-grid" data-layout-group="camera-grid">
+                <article class="camera-card customizable-card" data-card-id="cam1-rgb" data-module="cam1" draggable="true">
+                    <h3>Cam1 RGB</h3>
+                    <img id="cam1-rgb-feed" src="/stream/cam1/rgb" alt="Cam1 RGB">
+                </article>
+                <article class="camera-card customizable-card" data-card-id="cam1-depth" data-module="cam1" draggable="true">
+                    <h3>Cam1 Depth</h3>
+                    <img id="cam1-depth-feed" src="/stream/cam1/depth" alt="Cam1 Depth">
+                </article>
+                <article class="camera-card customizable-card" data-card-id="cam2-rgb" data-module="cam2" draggable="true">
+                    <h3>Cam2 RGB</h3>
+                    <img id="cam2-rgb-feed" src="/stream/cam2/rgb" alt="Cam2 RGB">
+                </article>
+                <article class="camera-card customizable-card" data-card-id="cam2-depth" data-module="cam2" draggable="true">
+                    <h3>Cam2 Depth</h3>
+                    <img id="cam2-depth-feed" src="/stream/cam2/depth" alt="Cam2 Depth">
+                </article>
+                <article class="camera-card claw customizable-card" data-card-id="claw-rgb" data-module="claw_cam" draggable="true">
+                    <h3>Claw Cam</h3>
+                    <img id="claw-rgb-feed" src="/stream/claw/rgb" alt="Claw Cam">
+                </article>
+            </div>
+        </section>
+
+        <section class="panel operations layout-panel" data-panel="operations" draggable="true">
+            <div class="panel-head drag-handle">
+                <h2>Arm / Gripper / Logs</h2>
+            </div>
+            <div class="operations-grid">
+                <div class="arm-block customizable-card" data-card-id="operations-arm-block" data-modules-any="arm_monitor trajectory" draggable="true">
+                    <h3>Arm Monitor</h3>
+                    <div class="pose-grid" data-module="arm_monitor">
+                        <div><span>X</span><strong id="mon-x">--</strong></div>
+                        <div><span>Y</span><strong id="mon-y">--</strong></div>
+                        <div><span>Z</span><strong id="mon-z">--</strong></div>
+                        <div><span>RX</span><strong id="mon-rx">--</strong></div>
+                        <div><span>RY</span><strong id="mon-ry">--</strong></div>
+                        <div><span>RZ</span><strong id="mon-rz">--</strong></div>
+                    </div>
+                    <div id="trajectory-plot" data-module="trajectory"></div>
+                </div>
+                <div class="side-blocks layout-container" data-layout-group="operations-side-blocks">
+                    <section class="subpanel customizable-card"
+                        data-card-id="operations-quick-demo"
+                        data-module="quick_pick"
+                        data-ui-control="quick_pick.show_catalog_picker"
+                        draggable="true">
+                        <h3>Quick Demo</h3>
+                        <div class="form-grid compact">
+                            <label>
+                                <span>Object</span>
+                                <select id="quick-object"></select>
+                            </label>
+                            <label>
+                                <span>Method</span>
+                                <select id="quick-method">
+                                    <option value="fixed">fixed pick</option>
+                                    <option value="teach">teach replay</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="command-row">
+                            <button class="btn primary" id="btn-quick-run">Run Selected</button>
+                        </div>
+                        <div class="button-grid" id="quick-buttons"></div>
+                    </section>
+                    <section class="subpanel customizable-card" data-card-id="operations-voice-text" data-module="voice" draggable="true">
+                        <h3>Voice / Text</h3>
+                        <div class="command-row">
+                            <button class="btn" id="btn-lang-zh">ZH</button>
+                            <button class="btn" id="btn-lang-en">EN</button>
+                            <button class="btn primary" id="btn-mic">Mic</button>
+                        </div>
+                        <input type="text" id="voice-input" placeholder="Type a command or use browser speech...">
+                        <div class="command-row">
+                            <button class="btn primary" id="btn-send">Send</button>
+                        </div>
+                        <pre class="state-box" id="nlu-box">No NLU result yet.</pre>
+                    </section>
+                    <section class="subpanel customizable-card" data-card-id="operations-gripper" data-module="gripper" draggable="true">
+                        <h3>Gripper</h3>
+                        <pre class="state-box" id="gripper-box">No gripper state yet.</pre>
+                    </section>
+                    <section class="subpanel customizable-card" data-card-id="operations-validation" data-module="validation" draggable="true">
+                        <h3>Validation</h3>
+                        <pre class="state-box" id="validation-box">No validation session.</pre>
+                        <div class="command-row">
+                            <button class="btn primary" id="btn-validation-success">Mark Success</button>
+                            <button class="btn danger" id="btn-validation-fail">Mark Fail</button>
+                        </div>
+                    </section>
+                    <section class="subpanel customizable-card"
+                        data-card-id="operations-vla"
+                        data-module="vla" draggable="true">
+                        <h3>VLA Inference</h3>
+                        <pre class="state-box" id="vla-status-box">Status: idle</pre>
+                        <div class="command-row" style="flex-wrap:wrap;gap:4px;margin-top:6px;">
+                            <input type="text" id="vla-instruction" value="拿起梯形" style="flex:1;min-width:120px;" placeholder="instruction">
+                            <input type="number" id="vla-max-steps" value="200" min="1" max="1000" title="max steps" style="width:70px;">
+                        </div>
+                        <div class="command-row" style="margin-top:4px;">
+                            <label style="font-size:12px;display:flex;align-items:center;gap:4px;">
+                                <input type="checkbox" id="vla-dry-run" checked> Dry run
+                            </label>
+                        </div>
+                        <div class="command-row" style="margin-top:6px;">
+                            <button class="btn primary" id="btn-vla-start">Run VLA</button>
+                            <button class="btn danger" id="btn-vla-stop">Stop</button>
+                        </div>
+                        <div class="log-box" id="vla-log-box" style="height:120px;margin-top:6px;font-size:11px;"></div>
+                    </section>
+                </div>
+            </div>
+            <section class="logs-panel" data-module="logs">
+                <div class="panel-head compact">
+                    <h3>Runtime Logs</h3>
+                    <div class="panel-actions">
+                        <button class="btn ghost" id="btn-log-clear">Clear</button>
+                    </div>
+                </div>
+                <div class="log-box" id="log-box"></div>
+            </section>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

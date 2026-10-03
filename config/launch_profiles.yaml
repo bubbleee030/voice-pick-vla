@@ -1,0 +1,58 @@
+default_profile: "full"
+
+profiles:
+  full:
+    description: "Main Ubuntu control station with UI, RealSense, claw cam, teach/replay, and dataset capture."
+    demo_overrides:
+      modules:
+        voice: { enabled: true }
+        cam1: { enabled: true }
+        cam2: { enabled: true }
+        claw_cam: { enabled: true }
+        sensor_chart: { enabled: true }
+        arm_monitor: { enabled: true }
+        gripper: { enabled: true }
+        quick_pick: { enabled: true }
+        trajectory: { enabled: true }
+        teach: { enabled: true }
+        logs: { enabled: true }
+        virtual_env: { enabled: false }
+        virtual_env_data: { enabled: false }
+
+  recording:
+    description: "Recording-first profile with camera, claw cam, telemetry, and dataset capture prioritized."
+    demo_overrides:
+      modules:
+        voice: { enabled: false }
+        cam1: { enabled: true }
+        cam2: { enabled: true }
+        claw_cam: { enabled: true }
+        sensor_chart: { enabled: true }
+        arm_monitor: { enabled: true }
+        gripper: { enabled: true }
+        validation: { enabled: false }
+        quick_pick: { enabled: false }
+        trajectory: { enabled: true }
+        teach: { enabled: true }
+        logs: { enabled: true }
+        virtual_env: { enabled: false }
+        virtual_env_data: { enabled: false }
+
+  debug-modules:
+    description: "Low-risk debug profile with UI, logs, and opt-in hardware modules."
+    demo_overrides:
+      modules:
+        voice: { enabled: false }
+        cam1: { enabled: false }
+        cam2: { enabled: false }
+        claw_cam: { enabled: false }
+        sensor_chart: { enabled: false }
+        arm_monitor: { enabled: false }
+        gripper: { enabled: false }
+        validation: { enabled: false }
+        quick_pick: { enabled: false }
+        trajectory: { enabled: false }
+        teach: { enabled: true }
+        logs: { enabled: true }
+        virtual_env: { enabled: false }
+        virtual_env_data: { enabled: false }

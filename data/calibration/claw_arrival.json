@@ -1,0 +1,28 @@
+{
+  "board": {
+    "yolo_class": "board",
+    "setpoint_cx": 0.53,
+    "setpoint_cy": 0.5891,
+    "tol_cx": 0.04,
+    "tol_cy": 0.4991,
+    "n_samples": 41,
+    "setpoint_source": "servo_calibrate.py live measurement 2026-07-14"
+  },
+  "butter_knife": {
+    "yolo_class": "knife",
+    "setpoint_cx": 0.3956,
+    "setpoint_cy": 0.4596,
+    "tol_cx": 0.04,
+    "tol_cy": 0.2805,
+    "n_samples": 14
+  },
+  "trapezoid": {
+    "yolo_class": "trapezoid_white",
+    "setpoint_cx": 0.5311,
+    "setpoint_cy": 0.5821,
+    "tol_cx": 0.1257,
+    "tol_cy": 0.3197,
+    "n_samples": 42,
+    "setpoint_source": "servo_calibrate.py live measurement 2026-07-14"
+  }
+}

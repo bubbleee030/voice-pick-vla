@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Pick Demo</title>
+    <meta name="description" content="Voice-controlled robotic arm pick system demo">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="header">
+    <div class="header-left">
+        <h1>Voice Pick Demo</h1>
+        <span class="header-note">16:9 workspace, drag panels to rearrange, pull the corner to resize</span>
+    </div>
+    <div class="header-right">
+        <div class="status-badge" id="yolo-badge">
+            <span class="status-dot off"></span>
+            <span>YOLO: OFF</span>
+        </div>
+        <div class="status-badge" id="cam-badge">
+            <span class="status-dot" id="cam-dot"></span>
+            <span id="cam-label">CAM: --</span>
+        </div>
+        <div class="status-badge" id="arm-badge">
+            <span class="status-dot" id="arm-dot"></span>
+            <span id="arm-label">ARM: --</span>
+        </div>
+        <button class="btn-sm header-action-btn" id="btn-record-panels" title="Record each visible dashboard panel as a separate video">Record Panels</button>
+        <div class="header-critical-actions">
+            <button class="btn-sm btn-warning header-action-btn" id="btn-reset-alarms" title="Reset controller alarms">Reset Alarm</button>
+            <button class="btn-sm btn-danger header-action-btn estop-btn" id="btn-emergency-stop" title="Emergency stop arm and gripper">EMERGENCY STOP</button>
+        </div>
+        <button class="btn-icon" id="btn-layout-reset" title="Reset dashboard layout">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12a9 9 0 1 0 3-6.7"/>
+                <path d="M3 4v5h5"/>
+            </svg>
+        </button>
+        <button class="btn-icon" id="btn-arm-connect" title="Connect Arm">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+        </button>
+    </div>
+</header>
+
+<main id="dashboard-shell">
+    <div id="main-grid">
+
+        <section class="panel dashboard-panel" id="panel-cam1-rgb"
+            data-panel-id="cam1-rgb" data-default-x="0" data-default-y="0" data-default-w="7" data-default-h="4"
+            data-min-w="4" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">Cam1 RGB</span>
+                <span class="panel-badge" id="cam1-rgb-status">--</span>
+            </div>
+            <div class="panel-content">
+                <article class="camera-card camera-card-single">
+                    <div class="camera-container">
+                        <img id="cam1-rgb-feed" src="/stream/cam1/rgb" alt="Cam1 RGB">
+                        <div class="camera-overlay" id="cam1-rgb-overlay" style="display:none;">
+                            <span>Camera Offline</span>
+                            <button class="btn-sm" onclick="retryCamera('cam1','rgb')">Retry</button>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-cam1-depth"
+            data-panel-id="cam1-depth" data-default-x="7" data-default-y="0" data-default-w="7" data-default-h="4"
+            data-min-w="4" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">Cam1 Depth</span>
+                <span class="panel-badge" id="cam1-depth-status">--</span>
+            </div>
+            <div class="panel-content">
+                <article class="camera-card camera-card-single">
+                    <div class="camera-container">
+                        <img id="cam1-depth-feed" src="/stream/cam1/depth" alt="Cam1 Depth">
+                        <div class="camera-overlay" id="cam1-depth-overlay" style="display:none;">
+                            <span>Depth Offline</span>
+                            <button class="btn-sm" onclick="retryCamera('cam1','depth')">Retry</button>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-cam2-rgb"
+            data-panel-id="cam2-rgb" data-default-x="0" data-default-y="4" data-default-w="5" data-default-h="4"
+            data-min-w="4" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">Cam2 RGB</span>
+                <span class="panel-badge" id="cam2-rgb-status">--</span>
+            </div>
+            <div class="panel-content">
+                <article class="camera-card camera-card-single">
+                    <div class="camera-container">
+                        <img id="cam2-rgb-feed" src="/stream/cam2/rgb" alt="Cam2 RGB">
+                        <div class="camera-overlay" id="cam2-rgb-overlay" style="display:none;">
+                            <span>Camera Offline</span>
+                            <button class="btn-sm" onclick="retryCamera('cam2','rgb')">Retry</button>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-cam2-depth"
+            data-panel-id="cam2-depth" data-default-x="5" data-default-y="4" data-default-w="5" data-default-h="4"
+            data-min-w="4" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">Cam2 Depth</span>
+                <span class="panel-badge" id="cam2-depth-status">--</span>
+            </div>
+            <div class="panel-content">
+                <article class="camera-card camera-card-single">
+                    <div class="camera-container">
+                        <img id="cam2-depth-feed" src="/stream/cam2/depth" alt="Cam2 Depth">
+                        <div class="camera-overlay" id="cam2-depth-overlay" style="display:none;">
+                            <span>Depth Offline</span>
+                            <button class="btn-sm" onclick="retryCamera('cam2','depth')">Retry</button>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-claw-rgb"
+            data-panel-id="claw-rgb" data-default-x="10" data-default-y="4" data-default-w="4" data-default-h="4"
+            data-min-w="4" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">Claw RGB + YOLO</span>
+                <span class="panel-badge" id="claw-rgb-status">--</span>
+            </div>
+            <div class="panel-content">
+                <article class="camera-card camera-card-single">
+                    <div class="camera-container">
+                        <img id="claw-rgb-feed" src="/stream/claw/rgb" alt="Claw RGB">
+                        <div class="camera-overlay" id="claw-rgb-overlay" style="display:none;">
+                            <span>Claw Camera Offline</span>
+                            <button class="btn-sm" onclick="retryCamera('claw','rgb')">Retry</button>
+                        </div>
+                    </div>
+                    <div class="camera-caption" id="claw-rgb-detected">Detected: --</div>
+                </article>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-sensor-chart"
+            data-panel-id="sensor-chart" data-default-x="10" data-default-y="0" data-default-w="4" data-default-h="4"
+            data-min-w="4" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">Tactile Sensor</span>
+                <span class="panel-badge" id="sensor-status">--</span>
+            </div>
+            <div class="panel-content">
+                <div id="sensor-chart-plot"></div>
+                <div class="sensor-summary-grid">
+                    <div class="sensor-summary-row">
+                        <span class="sensor-summary-label">Left</span>
+                        <span class="sensor-summary-value" id="sensor-value-1">--</span>
+                    </div>
+                    <div class="sensor-summary-row">
+                        <span class="sensor-summary-label">Right</span>
+                        <span class="sensor-summary-value" id="sensor-value-2">--</span>
+                    </div>
+                    <div class="sensor-summary-row">
+                        <span class="sensor-summary-label">Front</span>
+                        <span class="sensor-summary-value" id="sensor-value-3">--</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-virtual-env-left"
+            data-panel-id="virtual-env-left" data-default-x="14" data-default-y="0" data-default-w="5" data-default-h="4"
+            data-min-w="4" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">Left D435i</span>
+                <span class="panel-badge" id="virtual-env-view-status-d435_left">--</span>
+            </div>
+            <div class="panel-content">
+                <div class="virtual-view-panel">
+                    <img class="virtual-env-image" id="virtual-env-view-d435_left" alt="Left D435i View">
+                </div>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-virtual-env-right"
+            data-panel-id="virtual-env-right" data-default-x="19" data-default-y="0" data-default-w="5" data-default-h="4"
+            data-min-w="4" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">Right D435i</span>
+                <span class="panel-badge" id="virtual-env-view-status-d435_right">--</span>
+            </div>
+            <div class="panel-content">
+                <div class="virtual-view-panel">
+                    <img class="virtual-env-image" id="virtual-env-view-d435_right" alt="Right D435i View">
+                </div>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-virtual-env-wrist"
+            data-panel-id="virtual-env-wrist" data-default-x="14" data-default-y="4" data-default-w="10" data-default-h="4"
+            data-min-w="5" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">Wrist</span>
+                <span class="panel-badge" id="virtual-env-view-status-wrist">--</span>
+            </div>
+            <div class="panel-content">
+                <div class="virtual-view-panel">
+                    <img class="virtual-env-image" id="virtual-env-view-wrist" alt="Wrist View">
+                </div>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-virtual-env-data"
+            data-panel-id="virtual-env-data" data-default-x="14" data-default-y="11" data-default-w="4" data-default-h="3"
+            data-min-w="4" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">Digital Twin Data</span>
+                <span class="panel-badge" id="virtual-env-status">Unavailable</span>
+            </div>
+            <div class="panel-content panel-scroll">
+                <div class="virtual-data-panel">
+                    <div class="virtual-env-actions">
+                        <button class="btn-sm" id="btn-virtual-env-calibrate">Calibrate Current</button>
+                        <button class="btn-sm" id="btn-virtual-env-reset-calibration">Reset Calib</button>
+                        <a class="btn-sm" id="virtual-env-open-webrtc" href="#" target="_blank" rel="noopener noreferrer">Open WebRTC</a>
+                        <a class="btn-sm" id="virtual-env-open-console" href="#" target="_blank" rel="noopener noreferrer">Open Console</a>
+                    </div>
+                    <div class="virtual-env-meta">
+                        <div class="virtual-env-row">
+                            <span class="virtual-env-label">Base</span>
+                            <span class="virtual-env-value" id="virtual-env-base">--</span>
+                        </div>
+                        <div class="virtual-env-row">
+                            <span class="virtual-env-label">Kind</span>
+                            <span class="virtual-env-value" id="virtual-env-kind">--</span>
+                        </div>
+                        <div class="virtual-env-row">
+                            <span class="virtual-env-label">Monitor</span>
+                            <span class="virtual-env-value" id="virtual-env-target">--</span>
+                        </div>
+                        <div class="virtual-env-row">
+                            <span class="virtual-env-label">Phase</span>
+                            <span class="virtual-env-value" id="virtual-env-phase">--</span>
+                        </div>
+                        <div class="virtual-env-row">
+                            <span class="virtual-env-label">Sync</span>
+                            <span class="virtual-env-value" id="virtual-env-sync-state">--</span>
+                        </div>
+                        <div class="virtual-env-row">
+                            <span class="virtual-env-label">Arm Sync</span>
+                            <span class="virtual-env-value" id="virtual-env-arm-sync">--</span>
+                        </div>
+                        <div class="virtual-env-row">
+                            <span class="virtual-env-label">Grip Sync</span>
+                            <span class="virtual-env-value" id="virtual-env-gripper-sync">--</span>
+                        </div>
+                        <div class="virtual-env-row wide">
+                            <span class="virtual-env-label">Task</span>
+                            <span class="virtual-env-value" id="virtual-env-task">--</span>
+                        </div>
+                        <div class="virtual-env-row wide">
+                            <span class="virtual-env-label">Views</span>
+                            <span class="virtual-env-value" id="virtual-env-views">--</span>
+                        </div>
+                        <div class="virtual-env-row wide">
+                            <span class="virtual-env-label">Sync Error</span>
+                            <span class="virtual-env-value" id="virtual-env-sync-error">--</span>
+                        </div>
+                        <div class="virtual-env-row wide">
+                            <span class="virtual-env-label">Offsets</span>
+                            <span class="virtual-env-value" id="virtual-env-arm-calibration">--</span>
+                        </div>
+                        <div class="virtual-env-row wide">
+                            <span class="virtual-env-label">Updated</span>
+                            <span class="virtual-env-value" id="virtual-env-updated">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-voice"
+            data-panel-id="voice" data-default-x="0" data-default-y="8" data-default-w="7" data-default-h="3"
+            data-min-w="5" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">Voice Input</span>
+                <div class="voice-header-controls">
+                    <div class="lang-toggle">
+                        <button class="btn-lang active" id="btn-lang-zh" data-lang="zh-TW">ZH</button>
+                        <button class="btn-lang" id="btn-lang-en" data-lang="en-US">EN</button>
+                    </div>
+                    <div class="asr-toggle">
+                        <button class="btn-asr-mode active" id="btn-asr-offline" type="button">Offline</button>
+                        <button class="btn-asr-mode" id="btn-asr-browser" type="button">Browser</button>
+                    </div>
+                </div>
+            </div>
+            <div class="panel-content panel-scroll">
+                <div class="voice-controls">
+                    <button class="mic-button" id="btn-mic" title="Hold to speak (or press Space)">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                            <line x1="12" y1="19" x2="12" y2="23"/>
+                            <line x1="8" y1="23" x2="16" y2="23"/>
+                        </svg>
+                    </button>
+                    <div class="voice-input-wrap">
+                        <input type="text" id="voice-input" placeholder="Type or speak a command..." autocomplete="off">
+                        <button class="btn-send" id="btn-send">Send</button>
+                    </div>
+                </div>
+                <div class="transcript" id="transcript"></div>
+                <div class="voice-mode-note" id="voice-mode-note">ASR Mode: Offline</div>
+                <div class="voice-summary-grid">
+                    <div class="voice-summary-card">
+                        <div class="voice-summary-label">Target</div>
+                        <div class="voice-summary-value" id="voice-match-target">--</div>
+                    </div>
+                    <div class="voice-summary-card">
+                        <div class="voice-summary-label">Match Rate</div>
+                        <div class="voice-summary-value" id="voice-match-rate">0%</div>
+                    </div>
+                    <div class="voice-summary-card">
+                        <div class="voice-summary-label">Confidence</div>
+                        <div class="voice-summary-value" id="voice-match-confidence">0%</div>
+                    </div>
+                    <div class="voice-summary-card">
+                        <div class="voice-summary-label">Status</div>
+                        <div class="voice-summary-value" id="voice-match-status">Waiting</div>
+                    </div>
+                </div>
+                <div class="voice-debug-card" id="voice-debug-card">
+                    <div class="voice-debug-row">
+                        <span class="voice-debug-label">Matched Phrase</span>
+                        <span class="voice-debug-value" id="voice-matched-phrase">--</span>
+                    </div>
+                    <div class="voice-debug-row">
+                        <span class="voice-debug-label">Resolved Object</span>
+                        <span class="voice-debug-value" id="voice-resolved-object">--</span>
+                    </div>
+                    <div class="voice-debug-row">
+                        <span class="voice-debug-label">Normalization</span>
+                        <span class="voice-debug-value" id="voice-normalization">--</span>
+                    </div>
+                </div>
+                <div class="nlu-card" id="nlu-card" style="display:none;">
+                    <div class="nlu-header">
+                        <span class="nlu-intent-badge" id="nlu-intent">--</span>
+                        <span class="nlu-object" id="nlu-object">--</span>
+                        <div class="nlu-conf-bar">
+                            <div class="nlu-conf-fill" id="nlu-conf-fill" style="width:0%"></div>
+                        </div>
+                        <span class="nlu-conf-text" id="nlu-conf-text">0%</span>
+                    </div>
+                    <p class="nlu-disambiguation" id="nlu-disambiguation" style="display:none;"></p>
+                    <div class="nlu-actions">
+                        <button class="btn-confirm" id="btn-confirm">Confirm</button>
+                        <button class="btn-cancel" id="btn-cancel">Cancel</button>
+                        <button class="btn-respeak" id="btn-respeak">Re-speak</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-monitor"
+            data-panel-id="monitor" data-default-x="7" data-default-y="8" data-default-w="4" data-default-h="3"
+            data-min-w="3" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">Arm Monitor</span>
+                <span class="panel-badge" id="monitor-status">Disconnected</span>
+            </div>
+            <div class="panel-content panel-scroll">
+                <div class="monitor-grid" id="monitor-grid">
+                    <div class="monitor-row">
+                        <span class="monitor-label">X</span>
+                        <span class="monitor-value" id="mon-x">--</span>
+                        <span class="monitor-unit">mm</span>
+                    </div>
+                    <div class="monitor-row">
+                        <span class="monitor-label">Y</span>
+                        <span class="monitor-value" id="mon-y">--</span>
+                        <span class="monitor-unit">mm</span>
+                    </div>
+                    <div class="monitor-row">
+                        <span class="monitor-label">Z</span>
+                        <span class="monitor-value" id="mon-z">--</span>
+                        <span class="monitor-unit">mm</span>
+                    </div>
+                    <div class="monitor-row">
+                        <span class="monitor-label">RX</span>
+                        <span class="monitor-value" id="mon-rx">--</span>
+                        <span class="monitor-unit">deg</span>
+                    </div>
+                    <div class="monitor-row">
+                        <span class="monitor-label">RY</span>
+                        <span class="monitor-value" id="mon-ry">--</span>
+                        <span class="monitor-unit">deg</span>
+                    </div>
+                    <div class="monitor-row">
+                        <span class="monitor-label">RZ</span>
+                        <span class="monitor-value" id="mon-rz">--</span>
+                        <span class="monitor-unit">deg</span>
+                    </div>
+                    <div class="monitor-footer">
+                        <span id="mon-update">Last: --</span>
+                        <span class="safety-indicator" id="safety-indicator">SAFE</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-gripper"
+            data-panel-id="gripper" data-default-x="11" data-default-y="8" data-default-w="4" data-default-h="3"
+            data-min-w="3" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">Gripper</span>
+                <span class="panel-badge" id="gripper-status">Disconnected</span>
+            </div>
+            <div class="panel-content">
+                <div class="gripper-panel">
+                    <div id="gripper-chart-plot"></div>
+                    <div class="gripper-summary-grid">
+                        <div class="gripper-row">
+                            <span class="gripper-label">Left</span>
+                            <span class="gripper-value" id="gripper-pos-2">--</span>
+                        </div>
+                        <div class="gripper-row">
+                            <span class="gripper-label">Right</span>
+                            <span class="gripper-value" id="gripper-pos-1">--</span>
+                        </div>
+                        <div class="gripper-row">
+                            <span class="gripper-label">Front</span>
+                            <span class="gripper-value" id="gripper-pos-3">--</span>
+                        </div>
+                        <div class="gripper-row wide">
+                            <span class="gripper-label">Pos</span>
+                            <span class="gripper-value" id="gripper-pos">--</span>
+                        </div>
+                    </div>
+                    <div class="gripper-actions" style="margin-top:6px;">
+                        <button class="btn-sm" id="btn-gripper-reboot"
+                            title="Reboot the finger motors to clear an overload torque-off latch (a finger reads a value but won't drive to goal). Re-enables torque and homes them open. No full service restart.">Reboot Fingers</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-validation"
+            data-panel-id="validation" data-default-x="15" data-default-y="8" data-default-w="5" data-default-h="3"
+            data-min-w="4" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">Validation</span>
+                <span class="panel-badge" id="validation-state-badge">Idle</span>
+            </div>
+            <div class="panel-content panel-scroll">
+                <div class="validation-controls">
+                    <select id="validation-object-select">
+                        <option value="">-- Select Object --</option>
+                    </select>
+                    <select id="validation-mode-select">
+                        <option value="fixed">Fixed</option>
+                        <option value="teach">Teach</option>
+                    </select>
+                    <button class="btn-validate" id="btn-validation-start">Start</button>
+                    <button class="btn-validate success" id="btn-validation-success" disabled>Success</button>
+                    <button class="btn-validate fail" id="btn-validation-fail" disabled>Fail</button>
+                </div>
+                <div class="validation-meta">
+                    <div class="validation-row">
+                        <span class="validation-label">Object</span>
+                        <span class="validation-value" id="validation-object">--</span>
+                    </div>
+                    <div class="validation-row">
+                        <span class="validation-label">Mode</span>
+                        <span class="validation-value" id="validation-mode">--</span>
+                    </div>
+                    <div class="validation-row">
+                        <span class="validation-label">Slot</span>
+                        <span class="validation-value" id="validation-slot">--</span>
+                    </div>
+                    <div class="validation-row">
+                        <span class="validation-label">Set</span>
+                        <span class="validation-value" id="validation-set">--</span>
+                    </div>
+                    <div class="validation-row wide">
+                        <span class="validation-label">Request</span>
+                        <span class="validation-value" id="validation-request">--</span>
+                    </div>
+                    <div class="validation-row wide">
+                        <span class="validation-label">Session</span>
+                        <span class="validation-value" id="validation-session-dir">--</span>
+                    </div>
+                    <div class="validation-row wide">
+                        <span class="validation-label">Last Result</span>
+                        <span class="validation-value" id="validation-last-result">--</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-quick"
+            data-panel-id="quick" data-default-x="20" data-default-y="8" data-default-w="4" data-default-h="3"
+            data-min-w="3" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">Quick Pick</span>
+            </div>
+            <div class="panel-content panel-scroll">
+                <div class="quick-controls"
+                    data-ui-controls-any="quick_pick.show_arm_controls quick_pick.show_reload_config">
+                    <button class="btn-sm" id="btn-ready"
+                        data-ui-control="quick_pick.show_arm_controls"
+                        title="Send arm to ready pose">Ready</button>
+                    <button class="btn-sm" id="btn-home"
+                        data-ui-control="quick_pick.show_arm_controls"
+                        title="Send arm home">Home</button>
+                    <button class="btn-sm" id="btn-reload-config"
+                        data-ui-control="quick_pick.show_reload_config"
+                        title="Reload YAML configs without full restart">Reload Config</button>
+                </div>
+                <div class="quick-controls"
+                    data-quick-fallback-group
+                    title="Model-free deterministic pick and place (no VLA model)">
+                    <span class="panel-title" style="font-size:11px;align-self:center;">Fallback P&rarr;P:</span>
+                    <button class="btn-sm" id="btn-fallback-trapezoid"
+                        data-quick-fallback-object="trapezoid">Trapezoid</button>
+                    <button class="btn-sm" id="btn-fallback-board"
+                        data-quick-fallback-object="board">Board</button>
+                    <button class="btn-sm" id="btn-fallback-butter_knife"
+                        data-quick-fallback-object="butter_knife"
+                        title="Fixed-coordinate deterministic pick and place">Butter Knife</button>
+                </div>
+                <div class="quick-controls">
+                    <button class="btn-sm" id="btn-finger-stage-complete"
+                        type="button" hidden
+                        title="Available only during an eligible grasp or release stage">Complete Finger Action</button>
+                </div>
+                <div class="quick-buttons" id="quick-buttons"
+                    data-ui-control="quick_pick.show_catalog_picker"></div>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-trajectory"
+            data-panel-id="trajectory" data-default-x="0" data-default-y="11" data-default-w="8" data-default-h="3"
+            data-min-w="4" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">3D Trajectory</span>
+                <div class="panel-actions">
+                    <button class="btn-sm" id="btn-traj-clear">Clear</button>
+                    <button class="btn-sm" id="btn-traj-export">Export CSV</button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div id="trajectory-plot"></div>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-teach"
+            data-panel-id="teach" data-default-x="8" data-default-y="11" data-default-w="6" data-default-h="3"
+            data-min-w="5" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">Teach Mode</span>
+            </div>
+            <div class="panel-content panel-scroll">
+                <div class="teach-controls">
+                    <input type="text" id="teach-name" placeholder="Recording name..." value="">
+                    <button class="btn-teach" id="btn-teach-start">Record</button>
+                    <input type="number" id="teach-speed" value="30" min="1" max="100" title="Speed %">
+                    <button class="btn-teach" id="btn-teach-waypoint" disabled>Point</button>
+                    <button class="btn-teach" id="btn-teach-stop" disabled>Stop</button>
+                </div>
+                <div class="teach-waypoints" id="teach-waypoints">Current waypoints: none</div>
+                <div class="teach-replay">
+                    <select id="teach-replay-select"><option value="">-- Select Recording --</option></select>
+                    <select id="teach-replay-mode">
+                        <option value="phase">Phase Replay</option>
+                        <option value="phase_axis_split">Phase XY/Z Split</option>
+                        <option value="raw">Raw Replay</option>
+                    </select>
+                    <button class="btn-teach" id="btn-teach-replay">Replay</button>
+                    <button class="btn-teach" id="btn-teach-regenerate-phase">Regen Phase YAML</button>
+                </div>
+                <div class="teach-list" id="teach-list"></div>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-vla"
+            data-module="vla"
+            data-panel-id="vla" data-default-x="14" data-default-y="11" data-default-w="4" data-default-h="3"
+            data-min-w="4" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">VLA Inference</span>
+                <span class="panel-badge" id="vla-badge">idle</span>
+            </div>
+            <div class="panel-content panel-scroll">
+                <div class="teach-controls" style="flex-wrap:wrap;gap:4px;">
+                    <input type="text" id="vla-instruction" value="拿起梯形" placeholder="instruction" style="flex:1;min-width:100px;">
+                    <input type="number" id="vla-max-steps" value="200" min="1" max="1000" title="Max steps" style="width:60px;">
+                    <label style="font-size:11px;display:flex;align-items:center;gap:3px;white-space:nowrap;">
+                        <input type="checkbox" id="vla-dry-run" checked> Dry run
+                    </label>
+                </div>
+                <div class="teach-controls" style="margin-top:4px;">
+                    <button class="btn-teach" id="btn-vla-start">Run VLA</button>
+                    <button class="btn-teach" id="btn-vla-stop">Stop</button>
+                </div>
+                <div class="teach-controls" style="flex-wrap:wrap;gap:4px;margin-top:6px;border-top:1px solid #333;padding-top:6px;">
+                    <select id="vla-auto-object" title="Object" style="flex:1;min-width:90px;">
+                        <option value="trapezoid">trapezoid</option>
+                        <option value="board">board</option>
+                        <option value="butter_knife">butter_knife</option>
+                    </select>
+                    <select id="vla-auto-mode" title="Approach mode" style="width:88px;">
+                        <option value="vla">VLA</option>
+                        <option value="locator">locator</option>
+                    </select>
+                    <button class="btn-teach" id="btn-vla-auto">Auto Run</button>
+                    <button class="btn-teach" id="btn-vla-gate" style="display:none;background:#f59e0b;color:#111;"></button>
+                </div>
+                <div class="teach-controls" style="flex-wrap:wrap;gap:4px;margin-top:4px;font-size:10px;">
+                    <label title="YOLO confidence floor">conf <input type="number" id="tune-conf_floor" value="0.5" step="0.05" min="0" max="1" style="width:52px;"></label>
+                    <label title="arrival tolerance in mm (converted per object via the calibrated jacobian)">tol_mm <input type="number" id="tune-arrival_tol_mm" value="12" step="1" min="3" max="40" style="width:52px;"></label>
+                    <label title="condition C: model-wants-to-stay mm">stay <input type="number" id="tune-stay_mm" value="15" step="1" min="1" max="60" style="width:52px;"></label>
+                    <label title="servo max step mm (claw-takeover move size per correction)">srv <input type="number" id="tune-servo_max_step_mm" value="35" step="1" min="1" max="60" style="width:52px;"></label>
+                    <button class="btn-teach" id="btn-vla-tune" style="font-size:10px;">Apply</button>
+                </div>
+                <div class="log-container" id="vla-log-container" style="height:80px;margin-top:6px;font-size:10px;"></div>
+            </div>
+        </section>
+
+        <section class="panel dashboard-panel" id="panel-logs"
+            data-panel-id="logs" data-default-x="18" data-default-y="11" data-default-w="6" data-default-h="3"
+            data-min-w="5" data-min-h="3">
+            <div class="panel-header">
+                <span class="panel-title">Arm Logs</span>
+                <div class="panel-actions">
+                    <button class="btn-sm" id="btn-log-clear">Clear</button>
+                    <button class="btn-sm" id="btn-log-export">Export</button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div class="log-container" id="log-container"></div>
+            </div>
+        </section>
+
+    </div>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

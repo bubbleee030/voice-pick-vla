@@ -1,0 +1,163 @@
+# Object definitions for the fixed-position validation workflow.
+#
+# Notes:
+# - `slot_id` is the physical slot on the table.
+# - `table_set_id` is the tabletop grouping used during validation rounds.
+# - All objects share the same `approach` pose (the common ready point).
+# - `pick` poses below are placeholders and should be tuned on the real setup.
+
+classes:
+  chopsticks:
+    yolo_class: "chopsticks"
+    chinese: ["筷子", "一雙筷子", "筷"]
+    english: ["chopsticks", "a pair of chopsticks"]
+    slot_id: "slot1"
+    table_set_id: "set_a"
+    pick_z_offset_mm: 20
+    fixed_poses:
+      approach: [490127, 0, 425027, 179999, 0, 0]
+      pick:     [438000, 162000, 336000, 179999, 0, -12000]
+
+  stick:
+    yolo_class: "stick"
+    chinese: ["烤肉串", "竹籤", "串子", "棒子"]
+    english: ["stick", "skewer", "bbq skewer"]
+    slot_id: "slot1"
+    table_set_id: "set_b"
+    pick_z_offset_mm: 25
+    fixed_poses:
+      approach: [490127, 0, 425027, 179999, 0, 0]
+      pick:     [438000, 162000, 346000, 179999, 4000, -5000]
+
+  scissors:
+    yolo_class: "scissors"
+    chinese: ["剪刀", "小剪刀"]
+    english: ["scissors", "shears"]
+    slot_id: "slot1"
+    table_set_id: "set_c"
+    pick_z_offset_mm: 25
+    fixed_poses:
+      approach: [490127, 0, 425027, 179999, 0, 0]
+      pick:     [438000, 162000, 330000, 179999, -6000, 15000]
+
+  trapezoid:
+    yolo_class: "trapezoid"
+    chinese: ["梯形", "梯形塊", "梯形物"]
+    english: ["trapezoid", "trapezoid block"]
+    slot_id: "slot2"
+    table_set_id: "set_a"
+    default_teach_recording: "trapedzoid_v4.merged"
+    pick_z_offset_mm: 25
+    fixed_poses:
+      approach: [490127, 0, 425027, 179999, 0, 0]
+      pick:     [500000, 12000, 344000, 179999, 0, 0]
+
+  board:
+    yolo_class: "board"
+    chinese: ["電路板", "板子", "板"]
+    english: ["board", "circuit board", "pcb"]
+    slot_id: "slot2"
+    table_set_id: "set_b"
+    pick_z_offset_mm: 18
+    fixed_poses:
+      approach: [490127, 0, 425027, 179999, 0, 0]
+      pick:     [500000, 12000, 338000, 179999, 3000, -8000]
+
+  butter_knife:
+    yolo_class: "butter_knife"
+    chinese: ["奶油抹刀", "抹刀", "奶油刀"]
+    english: ["butter knife", "spreader", "butter spreader"]
+    slot_id: "slot2"
+    table_set_id: "set_c"
+    pick_z_offset_mm: 18
+    fixed_poses:
+      approach: [490127, 0, 425027, 179999, 0, 0]
+      pick:     [500000, 12000, 332000, 179999, -4000, 12000]
+
+  spoon:
+    yolo_class: "spoon"
+    chinese: ["湯匙", "大湯匙", "匙子"]
+    english: ["spoon", "soup spoon"]
+    slot_id: "slot3"
+    table_set_id: "set_a"
+    pick_z_offset_mm: 22
+    fixed_poses:
+      approach: [490127, 0, 425027, 179999, 0, 0]
+      pick:     [438000, -162000, 334000, 179999, 0, 10000]
+
+  coffee_scoop:
+    yolo_class: "coffee_scoop"
+    chinese: ["小湯匙", "咖啡匙", "咖啡勺"]
+    english: ["coffee scoop", "small spoon", "measuring scoop"]
+    slot_id: "slot3"
+    table_set_id: "set_b"
+    pick_z_offset_mm: 22
+    fixed_poses:
+      approach: [490127, 0, 425027, 179999, 0, 0]
+      pick:     [438000, -162000, 342000, 179999, 5000, 16000]
+
+  tweezers:
+    yolo_class: "tweezers"
+    chinese: ["鑷子", "夾子", "小鑷子"]
+    english: ["tweezers", "forceps"]
+    slot_id: "slot3"
+    table_set_id: "set_c"
+    pick_z_offset_mm: 18
+    fixed_poses:
+      approach: [490127, 0, 425027, 179999, 0, 0]
+      pick:     [438000, -162000, 328000, 179999, -3000, -14000]
+
+  knife:
+    yolo_class: "knife"
+    chinese: ["刀子", "刀", "菜刀"]
+    english: ["knife", "cutter"]
+    slot_id: "slot4"
+    table_set_id: "set_b"
+    pick_z_offset_mm: 20
+    fixed_poses:
+      approach: [490127, 0, 425027, 179999, 0, 0]
+      pick:     [565000, 6000, 333000, 179999, 0, 22000]
+
+pick_defaults:
+  approach_height_mm: 80
+  lift_height_mm: 100
+  speed_percent: 20
+  gripper_close_delay_s: 1.0
+
+# ---------------------------------------------------------------------------
+# Fallback (model-free) pick->place config.
+# Used when the VLA model path is unavailable. The runner (ArmService.run_fallback)
+# synthesizes a straight-down pick from `grasp_pose`, transits via ready_pose,
+# then descends to a shared drop point and runs a per-object finger release.
+#
+# Phase 1 (current): grasp_pose seeded from each object's fixed_poses.pick;
+#   grasp_finger_pos / place.z_mm / release_steps are SAFE PLACEHOLDERS so the
+#   motion + guardrail path can be verified without descending into the table.
+# Phase 2: re-record clean grasp + 3-finger release via scripts/fallback_teach.py.
+# Phase 3: tune place.z_mm (real drop height) on the rig.
+# ---------------------------------------------------------------------------
+fallback:
+  trapezoid:
+    grasp_pose: [500000, 12000, 344000, 179999, 0, 0]      # seeded from fixed_poses.pick
+    grasp_finger_pos: null                                  # null -> use close(); re-record in Phase 2
+    place:
+      z_mm: 175                                            # PLACEHOLDER (~ready height, no real descent); tune Phase 3
+      release_steps: ["open"]                               # PLACEHOLDER; record 3-finger steps in Phase 2
+  board:
+    grasp_pose: [500000, 12000, 338000, 179999, 3000, -8000]
+    grasp_finger_pos: null
+    place:
+      z_mm: 175          # rig value 2026-07-14 (user); verify with the descend gate first run
+      release_steps: ["open"]
+  tweezers:
+    grasp_pose: [438000, -162000, 328000, 179999, -3000, -14000]
+    grasp_finger_pos: null
+    place:
+      z_mm: 425
+      release_steps: ["open"]
+  butter_knife:
+    grasp_pose: [490100, 0, 332000, 179999, -4000, 12000]  # seeded from fixed_poses.pick
+    grasp_finger_pos: null                                      # null -> use close(); re-record via fallback_teach.py
+    place:
+      z_mm: 175          # rig value 2026-07-14 (user); verify with the descend gate first run
+      release_steps: ["open"]
