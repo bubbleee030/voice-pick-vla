@@ -129,7 +129,7 @@ published.
 - **VLA backbone:** [RDT-1B (Robotics Diffusion Transformer)](https://github.com/thu-ml/RoboticsDiffusionTransformer).
   Model code in `vla/` is adapted from it. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 - **Tactile finger control (`agx/GP/`, `agx/motor/`):** developed by teammates
-  <!-- TODO: add teammate names -->. It is integrated here with permission.
+  潘彥丞, 冷堂愷, 陳旻佑, 吳丞恩 and 方信筌. It is integrated here with their permission.
 - Laptop-side system (arm control, vision pipeline, VLA deployment, voice interface,
   dashboard, AGX finger service integration): <!-- TODO: your name --> (@bubbleee030).
 
