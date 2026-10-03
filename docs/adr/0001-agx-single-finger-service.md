@@ -9,7 +9,7 @@ ports (Dynamixel motors on the FTDI FT6RW7NN port, tactile sensor on ttyUSB0):
 
 - `gripper_record_api_v2.py` — the HTTP API our demo server's GripperService
   uses for the scripted fallback (open/close/set_position/state).
-- `run_LSTM5_toVLA.py` — the teammates' interactive terminal program running
+- `run_LSTM5_toVLA.py` — the interactive terminal program running
   the LSTM finger actions (tactile-driven grasp/release), operated by hand on
   a second screen; models load per action (seconds of lag at the handoff), the
   loop stops only on a local keyboard press.
@@ -28,7 +28,7 @@ serial ports and serves BOTH:
 - new LSTM routes: `/lstm/preload` (models + finger homing at auto-run start),
   `/lstm/start`, `/lstm/stop` (freeze in place), `/lstm/status`.
 
-`gripper_record_api_v2.py` is retired. The teammates' terminal program remains
+`gripper_record_api_v2.py` is retired. The interactive terminal program remains
 untouched on the AGX as the manual backup (mutually exclusive with the
 service, same ports).
 
@@ -38,9 +38,9 @@ service, same ports).
   finger action; the UI gate button now means "stop the fingers and continue".
 - Preload kills the model-load lag; finger homing moves to preload too (it
   takes ~4 s of serial writes).
-- Deviation from the teammates' script: their menu HOMES the fingers before
+- Deviation from the terminal script: its menu HOMES the fingers before
   every action — before a release that would drop the object, so the service
-  homes only on preload/grasp, never before a release. Confirm with teammates.
+  homes only on preload/grasp, never before a release. Confirm on the rig.
 - The service must not import `keyboard` (needs root + local TTY); stopping is
   HTTP-only.
 - If the service is down, the auto flow degrades gracefully: gates become

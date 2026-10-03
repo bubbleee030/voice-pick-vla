@@ -17,7 +17,7 @@ SAFETY (defense in depth):
   * Per-move distance cap: refuses any single commanded move > --max-step mm.
   * Low default speed (12%), adjustable live with +/-.
   * Orientation pinned to (180,0,0) — only x,y,z come from the model (gripper is
-    the teammate program's job; rotations were never learned).
+    the finger program's job; rotations were never learned).
 
 The arm is NEVER auto-homed; put it at ready yourself first. Stop the demo server
 (it owns the cameras): pkill -f voice_pick_demo.py
@@ -278,7 +278,7 @@ class StepThrough:
             # Stop condition: reached the handoff plane.
             if cur[2] <= self.z_floor + 2.0:
                 print(f"\n*** Reached handoff plane z={cur[2]:.1f} (floor {self.z_floor:.0f}). "
-                      f"STOP for the teammate pick program. ***")
+                      f"STOP for the AGX finger pick program. ***")
                 break
             # Trigger B: measured pose left the box (x,y always; z only when not freeze-z,
             # because freeze-z pins z and the arm's physical Cartesian wobble around the

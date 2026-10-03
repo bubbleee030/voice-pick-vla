@@ -9,7 +9,7 @@ stayed open, slid under the object, and lifted it — no grasp model, only a
 release. The knife's finger wiring was therefore release-only (`knife_release`,
 trained at `hidden64_ly2`).
 
-Teammates have now trained a real tactile LSTM **grasp** for the knife and
+We have now trained a real tactile LSTM **grasp** for the knife and
 retrained its release. Both live on the AGX at
 `GP/training_pack/model_pack/LSTM/{knife_grasp,knife_release}/` with three size
 variants each (`hidden32_ly2`, `hidden64_ly2`, `hidden64_ly3`). We want the demo
@@ -55,7 +55,7 @@ Two coordinated changes (both must land together):
   different size validates better, change one line in `ACTIONS` (folder +
   variant string + `hidden,layers`) and redeploy — the filenames re-encode the
   variant, so all three fields must agree.
-- **Manual reference not updated.** `scripts/run_LSTM5_toVLA.py` (teammates'
+- **Manual reference not updated.** `scripts/run_LSTM5_toVLA.py` (the interactive LSTM
   hand-test menu, ADR 0001) still points `knife_release` at `hidden64_ly2` and
   has no `knife_grasp` branch. It is not part of the demo runtime; anyone using
   it to hand-test the new knife grasp must add that branch there separately.

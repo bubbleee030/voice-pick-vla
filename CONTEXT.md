@@ -15,7 +15,7 @@
   degrades; no vision decisions there, descent is blind and vertical.
 - **servo mode** — closed-loop x,y correction driven by the pixel error between the claw
   YOLO box center and the on-top setpoint, in capped mm steps, at hover z.
-- **handoff / handoff gate** — control alternation with the teammates' AGX gripper code:
+- **handoff / handoff gate** — control alternation with the AGX tactile finger controller:
   we descend to the per-object grasp z, PAUSE (gate) while their LSTM picks, we move to
   the release point, PAUSE while they release, we return to ready. Only we command the
   arm; the AGX only commands the fingers. Reaching a gate point auto-starts the finger

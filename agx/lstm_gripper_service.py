@@ -3,7 +3,7 @@
 
 Replaces gripper_record_api_v2.py (ADR 0001): ONE process owns the Dynamixel
 motor port and the tactile sensor, serving both the simple gripper API the
-laptop's fallback uses and the teammates' LSTM finger actions, remotely
+laptop's fallback uses and the tactile LSTM finger actions, remotely
 triggered by the laptop's auto-run gates.
 
 Deploy:  scp to agx:~/Desktop/GP/lstm_gripper_service.py
@@ -429,7 +429,7 @@ class LSTMRunner:
         if action in self.loaded:
             return
         d, variant, hidden, layers, _ = ACTIONS[action]
-        # Trusted local files only (teammates' training_pack on this AGX);
+        # Trusted local files only (the training_pack on this AGX);
         # sklearn scalers require pickle — never point ACTIONS at a download.
         scaler_x = joblib.load(f"{d}/LSTM_scaler_x_{variant}.pkl")
         scaler_y = joblib.load(f"{d}/LSTM_scaler_y_{variant}.pkl")

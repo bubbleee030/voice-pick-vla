@@ -8,7 +8,7 @@ order, with exact commands. The §3 software (auto-run, arrival, servo) is a
 build task for the laptop-side Claude session, not an operator step — it gets
 a one-paragraph summary at the end.
 
-**Roles:** only OUR stack commands the arm; the AGX (teammates) only commands
+**Roles:** only OUR stack commands the arm; the AGX finger controller only commands
 the fingers. The UI is the control surface; the AGX terminal sits on screen 2.
 
 ---
@@ -203,7 +203,7 @@ after Step 3's numbers are in `data/calibration/claw_servo.yaml`
   MovP↔MovL, `s` stop.)
 
   Flow: VLA approach to hover → descend to the z=175 handoff plane
-  (stepthrough stops there by design) → **AGX teammates run the fingers** →
+  (stepthrough stops there by design) → **the AGX LSTM runs the fingers** →
   place + return via the existing hardcoded flow, same as today's runs.
 
 Pre-demo checklist:
@@ -310,14 +310,14 @@ Two behaviors that came out of the calibration session:
 
 ## AGX finger integration (ADR 0001 — built 2026-07-14 night, NOT yet deployed)
 
-The teammates' LSTM program is now callable from our pipeline. Design (full
+The tactile LSTM program is now callable from our pipeline. Design (full
 rationale: `docs/adr/0001-agx-single-finger-service.md`):
 
 - **One service owns the fingers**: `agx/lstm_gripper_service.py` (in this
   repo, to be copied to the AGX) replaces `gripper_record_api_v2.py` on port
   5003. It serves the same routes the fallback uses (`/state`, `/command`,
   `/set_position`) plus `/lstm/preload`, `/lstm/start`, `/lstm/stop`,
-  `/lstm/status`. The teammates' terminal program stays as manual backup
+  `/lstm/status`. The interactive terminal program stays as manual backup
   (never run both — same serial ports).
 - **Preload at auto-run start**: pressing Auto Run fires `/lstm/preload`
   (models → GPU + finger homing, ~5–10 s) while the arm is still approaching —
@@ -341,7 +341,7 @@ rationale: `docs/adr/0001-agx-single-finger-service.md`):
 3. From the laptop: `curl http://192.168.1.100:5003/health` → `lstm_v1`.
 4. Verify fallback still works (open/close via UI), then one preload:
    `curl -X POST http://192.168.1.100:5003/lstm/preload -H 'Content-Type: application/json' -d '{"object":"trapezoid"}'`.
-5. **Confirm with teammates**: the service deliberately does NOT home the
+5. **Confirm with the finger-control side**: the service deliberately does NOT home the
    fingers before a release (their menu homes before every action — mid-hold
    that would drop the object). Also verify the `o`/`c` finger poses
    (`OPEN_POS`/`CLOSE_POS` constants) against their record_api_v2 values.
