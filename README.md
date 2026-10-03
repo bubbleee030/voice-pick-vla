@@ -124,6 +124,12 @@ Weights are not tracked in git. Download them from the
 The fine-tuned RDT checkpoint and the recorded VLA datasets (about 27 GB) are not
 published.
 
+## Related repository
+
+- [bubbleee030/VLA](https://github.com/bubbleee030/VLA): the earlier VLA training
+  work. It has the RDT fine-tuning pipeline, dataset conversion and augmentation,
+  and tactile-vs-baseline experiments that this system's policy builds on.
+
 ## Credits
 
 - **VLA backbone:** [RDT-1B (Robotics Diffusion Transformer)](https://github.com/thu-ml/RoboticsDiffusionTransformer).
