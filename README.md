@@ -119,7 +119,7 @@ Weights are not tracked in git. Download them from the
 |---|---|---|
 | `yolo_models.zip` | claw-cam / side-cam detection | `data/models/yolo/` |
 | `vla_instruction_embeddings.zip` | VLA language conditioning | `data/` |
-| `agx_lstm_model_pack.zip` | AGX finger actions | `~/Desktop/GP/training_pack/model_pack/LSTM/` on the AGX |
+| `agx_lstm_model_pack.zip` | AGX finger actions | `~/Desktop/GP/training_pack/model_pack/` on the AGX (zip contains `LSTM/`) |
 
 The fine-tuned RDT checkpoint and the recorded VLA datasets (about 27 GB) are not
 published.
